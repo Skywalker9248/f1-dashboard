@@ -231,42 +231,85 @@ exports.getLastRaceResults = async () => {
  */
 exports.getNextRace = async () => {
     try {
-        const currentYear = new Date().getFullYear();
-        const now = new Date();
-        
-        // Get all sessions for year
-        const res = await axios.get(`${OPENF1_URL}/sessions?year=${currentYear}`);
-        const sessions = res.data;
-        
-        // Find next session that hasn't started
-        const upcoming = sessions
-            .filter(s => new Date(s.date_start) > now)
-            .sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
-            
-        if (upcoming.length === 0) {
-             return { message: 'Season finished', nextSeason: currentYear + 1 };
+        // 1. Get Next Race Schedule from Jolpica (Ergast replacement)
+        const scheduleRes = await axios.get('http://api.jolpi.ca/ergast/f1/current/next.json');
+        const raceData = scheduleRes.data.MRData.RaceTable.Races[0];
+
+        if (!raceData) {
+            return { message: 'Season finished', nextSeason: new Date().getFullYear() + 1 };
         }
 
-        // Get the "Race" session of that meeting to get the main event details
-        const nextRaceSession = upcoming.find(s => s.session_name === 'Race') || upcoming[0];
+        // 2. Extract Location for Weather
+        const lat = raceData.Circuit.Location.lat;
+        const long = raceData.Circuit.Location.long;
+        const raceDateStr = raceData.date; // YYYY-MM-DD
+
+        // 3. Fetch Weather from Open-Meteo (Free, no key needed)
+        // We ask for daily max/min temp and max precipitation probability for the race day
+        let weatherData = null;
+        try {
+            const weatherRes = await axios.get('https://api.open-meteo.com/v1/forecast', {
+                params: {
+                    latitude: lat,
+                    longitude: long,
+                    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+                    timezone: 'auto',
+                    start_date: raceDateStr,
+                    end_date: raceDateStr
+                }
+            });
+            
+            const daily = weatherRes.data.daily;
+            if (daily) {
+                weatherData = {
+                    tempMax: daily.temperature_2m_max[0],
+                    tempMin: daily.temperature_2m_min[0],
+                    precipProb: daily.precipitation_probability_max[0],
+                    weatherCode: daily.weather_code[0]
+                };
+            }
+        } catch (wErr) {
+            console.warn('Weather fetch failed, continuing without weather:', wErr.message);
+        }
+
+        // 4. Helper to construct sessions with estimated end times
+        const createSession = (name, dateStr, timeStr, durationMinutes) => {
+            const start = new Date(`${dateStr}T${timeStr}`);
+            const end = new Date(start.getTime() + durationMinutes * 60000);
+            return {
+                sessionName: name,
+                sessionType: name.includes('Practice') ? 'Practice' : name.includes('Qualifying') ? 'Qualifying' : 'Race',
+                dateStart: start.toISOString(),
+                dateEnd: end.toISOString()
+            };
+        };
+
+        // 5. Build Sessions List
+        const sessions = [];
+        // Standard durations (approximate)
+        if (raceData.FirstPractice) sessions.push(createSession('Practice 1', raceData.FirstPractice.date, raceData.FirstPractice.time, 60));
+        if (raceData.SecondPractice) sessions.push(createSession('Practice 2', raceData.SecondPractice.date, raceData.SecondPractice.time, 60));
+        if (raceData.ThirdPractice) sessions.push(createSession('Practice 3', raceData.ThirdPractice.date, raceData.ThirdPractice.time, 60));
+        if (raceData.SprintQualifying) sessions.push(createSession('Sprint Qualifying', raceData.SprintQualifying.date, raceData.SprintQualifying.time, 45));
+        if (raceData.Sprint) sessions.push(createSession('Sprint', raceData.Sprint.date, raceData.Sprint.time, 60));
+        if (raceData.Qualifying) sessions.push(createSession('Qualifying', raceData.Qualifying.date, raceData.Qualifying.time, 60));
         
-        // Get all sessions for that specific meeting (FP1, FP2, Quali, Race)
-        const meetingSessions = sessions
-            .filter(s => s.meeting_key === nextRaceSession.meeting_key)
-            .sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+        // Race (usually 2 hours window)
+        sessions.push(createSession('Race', raceData.date, raceData.time, 120));
+
+        // Sort by time
+        sessions.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
 
         return {
-            circuit: nextRaceSession.circuit_short_name,
-            location: nextRaceSession.location,
-            country: nextRaceSession.country_name,
-            raceDate: nextRaceSession.date_start,
-            meetingKey: nextRaceSession.meeting_key,
-            sessions: meetingSessions.map(s => ({
-                name: s.session_name,
-                start: s.date_start,
-                end: s.date_end
-            }))
+            circuit: raceData.Circuit.circuitName,
+            location: raceData.Circuit.Location.locality,
+            country: raceData.Circuit.Location.country,
+            raceDate: `${raceData.date}T${raceData.time}`,
+            meetingKey: raceData.round, // Using round number as key
+            sessions: sessions,
+            weather: weatherData
         };
+
     } catch (error) {
         console.error('Error fetching next race:', error.message);
         throw error;

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import ReactECharts from 'echarts-for-react';
-import API from '../../axios';
+import { useEffect, useState } from "react";
+import ReactECharts from "echarts-for-react";
+import API from "../../axios";
 import {
   Typography,
   Grid,
@@ -16,7 +16,7 @@ import {
   Box,
   Chip,
   useTheme,
-} from '@mui/material';
+} from "@mui/material";
 
 interface SessionInfo {
   circuit: string;
@@ -55,7 +55,7 @@ const LastRace = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    API.get('/api/f1/last-race')
+    API.get("/api/f1/last-race")
       .then((response) => {
         setData(response.data);
         setLoading(false);
@@ -69,7 +69,7 @@ const LastRace = () => {
 
   if (loading)
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
         <CircularProgress />
       </Box>
     );
@@ -82,11 +82,11 @@ const LastRace = () => {
   const sortedStandings = [...standings].sort((a, b) => {
     const aDidNotFinish = a.dnf || a.dns || a.dsq;
     const bDidNotFinish = b.dnf || b.dns || b.dsq;
-    
+
     // If one finished and one didn't, finished comes first
     if (!aDidNotFinish && bDidNotFinish) return -1;
     if (aDidNotFinish && !bDidNotFinish) return 1;
-    
+
     // Both finished or both didn't finish, sort by position
     return a.position - b.position;
   });
@@ -94,14 +94,14 @@ const LastRace = () => {
   const theme = useTheme();
 
   const chartOption = {
-    title: { 
-      text: 'Race Results', 
-      left: 'center',
-      textStyle: { color: theme.palette.text.primary }
+    title: {
+      text: "Race Results",
+      left: "center",
+      textStyle: { color: theme.palette.text.primary },
     },
     tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
       backgroundColor: theme.palette.background.paper,
       textStyle: { color: theme.palette.text.primary },
       formatter: (params: any) => {
@@ -111,49 +111,60 @@ const LastRace = () => {
       },
     },
     xAxis: {
-      type: 'category',
+      type: "category",
       data: sortedStandings.map((d) => d.driverAcronym),
-      axisLabel: { 
-        rotate: 45, 
+      axisLabel: {
+        rotate: 45,
         interval: 0,
-        color: theme.palette.text.secondary
+        color: theme.palette.text.secondary,
       },
     },
-    yAxis: { 
-      type: 'value', 
-      name: 'Points',
+    yAxis: {
+      type: "value",
+      name: "Points",
       nameTextStyle: { color: theme.palette.text.secondary },
-      axisLabel: { color: theme.palette.text.secondary }
+      axisLabel: { color: theme.palette.text.secondary },
     },
     series: [
       {
-        name: 'Points',
-        type: 'bar',
-        data: sortedStandings.map((d) => ({ value: d.points, itemStyle: { color: `#${d.teamColor || '1976d2'}` } })),
-        label: { show: true, position: 'top', color: theme.palette.text.primary },
+        name: "Points",
+        type: "bar",
+        data: sortedStandings.map((d) => ({
+          value: d.points,
+          itemStyle: { color: `#${d.teamColor || "1976d2"}` },
+        })),
+        label: {
+          show: true,
+          position: "top",
+          color: theme.palette.text.primary,
+        },
       },
     ],
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
   return (
     <Box sx={{ py: 2 }}>
       {/* Session Information */}
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.default' }}>
+      <Paper sx={{ p: 3, mb: 4, backgroundColor: "background.default" }}>
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
               {sessionInfo.sessionName}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               {sessionInfo.circuit} - {sessionInfo.country}
             </Typography>
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
+          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: "right" } }}>
             <Typography variant="h6">{formatDate(sessionInfo.date)}</Typography>
             <Typography variant="body2" color="text.secondary">
               {sessionInfo.location}
@@ -165,47 +176,96 @@ const LastRace = () => {
       {/* Results Table */}
       <Grid container spacing={4}>
         <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
-            <Typography component="h2" variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
+          <Paper sx={{ p: 3, display: "flex", flexDirection: "column" }}>
+            <Typography
+              component="h2"
+              variant="h6"
+              color="primary"
+              gutterBottom
+              sx={{ mb: 2 }}
+            >
               Race Results
             </Typography>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell><strong>Pos</strong></TableCell>
-                    <TableCell><strong>Driver</strong></TableCell>
-                    <TableCell><strong>Team</strong></TableCell>
-                    <TableCell align="right"><strong>Points</strong></TableCell>
-                    <TableCell align="right"><strong>Gap</strong></TableCell>
-                    <TableCell align="center"><strong>Status</strong></TableCell>
+                    <TableCell>
+                      <strong>Pos</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Driver</strong>
+                    </TableCell>
+                    <TableCell>
+                      <strong>Team</strong>
+                    </TableCell>
+                    <TableCell align="right">
+                      <strong>Points</strong>
+                    </TableCell>
+                    <TableCell align="right">
+                      <strong>Gap</strong>
+                    </TableCell>
+                    <TableCell align="center">
+                      <strong>Status</strong>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {sortedStandings.map((row, index) => (
-                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
+                    <TableRow
+                      key={index}
+                      sx={{ "&:hover": { backgroundColor: "action.hover" } }}
+                    >
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Box sx={{ width: 4, height: 24, backgroundColor: `#${row.teamColor}`, borderRadius: 1 }} />
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Box
+                            sx={{
+                              width: 4,
+                              height: 24,
+                              backgroundColor: `#${row.teamColor}`,
+                              borderRadius: 1,
+                            }}
+                          />
                           {row.position}
                         </Box>
                       </TableCell>
                       <TableCell>
                         <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{row.driver}</Typography>
-                          <Typography variant="caption" color="text.secondary">#{row.driverNumber} • {row.driverAcronym}</Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontWeight: "bold" }}
+                          >
+                            {row.driver}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            #{row.driverNumber} • {row.driverAcronym}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>{row.team}</TableCell>
-                      <TableCell align="right"><strong>{row.points}</strong></TableCell>
                       <TableCell align="right">
-                        {row.position === 1 ? '-' : `+${(row.gapToLeader || 0).toFixed(3)}s`}
+                        <strong>{row.points}</strong>
+                      </TableCell>
+                      <TableCell align="right">
+                        {row.position === 1
+                          ? "-"
+                          : `+${(row.gapToLeader || 0).toFixed(3)}s`}
                       </TableCell>
                       <TableCell align="center">
-                        {row.dnf && <Chip label="DNF" size="small" color="error" />}
-                        {row.dns && <Chip label="DNS" size="small" color="warning" />}
-                        {row.dsq && <Chip label="DSQ" size="small" color="error" />}
-                        {!row.dnf && !row.dns && !row.dsq && <Chip label="Finished" size="small" color="success" />}
+                        {row.dnf && (
+                          <Chip label="DNF" size="small" color="error" />
+                        )}
+                        {row.dns && (
+                          <Chip label="DNS" size="small" color="warning" />
+                        )}
+                        {row.dsq && (
+                          <Chip label="DSQ" size="small" color="error" />
+                        )}
+                        {!row.dnf && !row.dns && !row.dsq && (
+                          <Chip label="Finished" size="small" color="success" />
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -217,17 +277,22 @@ const LastRace = () => {
       </Grid>
 
       {/* Chart - Full Width */}
-      <Box sx={{ 
-        width: '100vw',
-        position: 'relative',
-        left: '50%',
-        right: '50%',
-        marginLeft: '-50vw',
-        marginRight: '-50vw',
-        mt: 4
-      }}>
+      <Box
+        sx={{
+          width: "100vw",
+          position: "relative",
+          left: "50%",
+          right: "50%",
+          marginLeft: "-50vw",
+          marginRight: "-50vw",
+          mt: 4,
+        }}
+      >
         <Paper sx={{ height: 600, p: 2, borderRadius: 0 }}>
-          <ReactECharts option={chartOption} style={{ height: '100%', width: '100%' }} />
+          <ReactECharts
+            option={chartOption}
+            style={{ height: "100%", width: "100%" }}
+          />
         </Paper>
       </Box>
     </Box>
