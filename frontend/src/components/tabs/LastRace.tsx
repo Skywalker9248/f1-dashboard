@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
+import API from '../../axios';
 import {
   Typography,
   Grid,
@@ -53,13 +54,9 @@ const LastRace = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/f1/last-race')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch data');
-        return res.json();
-      })
-      .then((data) => {
-        setData(data);
+    API.get('/api/f1/last-race')
+      .then((response) => {
+        setData(response.data);
         setLoading(false);
       })
       .catch((err) => {

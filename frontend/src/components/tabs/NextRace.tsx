@@ -19,6 +19,7 @@ import {
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import FlagIcon from '@mui/icons-material/Flag';
+import API from '../../axios';
 
 interface Session {
   sessionName: string;
@@ -44,13 +45,9 @@ const NextRace = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/f1/next-race')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch data');
-        return res.json();
-      })
-      .then(data => {
-        setData(data);
+    API.get('/api/f1/next-race')
+      .then(response => {
+        setData(response.data);
         setLoading(false);
       })
       .catch(err => {

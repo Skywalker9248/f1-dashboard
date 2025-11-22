@@ -17,6 +17,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ReactECharts from 'echarts-for-react';
+import API from '../../axios';
 
 interface DriverStanding {
   position: number;
@@ -45,13 +46,13 @@ const OverallStandings = () => {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:5000/api/f1/standings/drivers').then((res) => res.json()),
-      fetch('http://localhost:5000/api/f1/standings/constructors').then((res) => res.json()),
+      API.get('/api/f1/standings/drivers'),
+      API.get('/api/f1/standings/constructors'),
     ])
       .then(([driversResponse, constructorsResponse]) => {
         // Handle new response format with season info
-        const drivers = driversResponse.standings || driversResponse;
-        const constructors = constructorsResponse.standings || constructorsResponse;
+        const drivers = driversResponse.data.standings || driversResponse.data;
+        const constructors = constructorsResponse.data.standings || constructorsResponse.data;
         setDriverStandings(drivers);
         setConstructorStandings(constructors);
         setLoading(false);
