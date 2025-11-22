@@ -43,3 +43,9 @@ lerna-debug.log*
 
 # OS
 Thumbs.db
+
+# Backend test files
+backend/**/*.test.js
+backend/**/*.spec.js
+backend/tests/
+backend/test/
