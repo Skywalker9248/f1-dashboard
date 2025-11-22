@@ -11,12 +11,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
   Alert,
   Box,
   Chip,
   useTheme,
 } from "@mui/material";
+import LoadingUI from "../loadingUI";
 
 interface SessionInfo {
   circuit: string;
@@ -67,12 +67,7 @@ const LastRace = () => {
       });
   }, []);
 
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading) return <LoadingUI />;
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!data) return <Alert severity="warning">No data available</Alert>;
 

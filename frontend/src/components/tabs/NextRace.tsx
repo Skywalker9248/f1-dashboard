@@ -20,6 +20,8 @@ import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import API from "../../axios"; // Ensure this path matches your project
 import ScheduleWidget from "../widgets/ScheduleWidget";
 import WeatherWidget from "../widgets/WeatherWidget";
+import { calculateCountdown } from "../../../helpers/utils";
+import LoadingUI from "../loadingUI";
 
 // --- Types ---
 // These interfaces match the ones in the widgets.
@@ -90,12 +92,7 @@ const NextRace = () => {
       });
   }, []);
 
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading) return <LoadingUI />;
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!data) return <Alert severity="warning">No data available</Alert>;
 
@@ -111,16 +108,6 @@ const NextRace = () => {
       </Box>
     );
   }
-
-  const calculateCountdown = (dateString: string) => {
-    const now = new Date();
-    const raceDate = new Date(dateString);
-    const diff = raceDate.getTime() - now.getTime();
-    if (diff < 0) return null;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    return { days, hours };
-  };
 
   const countdown = data.raceDate ? calculateCountdown(data.raceDate) : null;
   const weatherInfo = data.weather
@@ -222,6 +209,10 @@ const NextRace = () => {
                       {countdown.hours}
                     </Typography>
                     <Typography variant="body2">hrs</Typography>
+                    <Typography variant="h3" fontWeight="bold">
+                      {countdown.minutes}
+                    </Typography>
+                    <Typography variant="body2">min</Typography>
                   </Box>
                 </CardContent>
               </Card>

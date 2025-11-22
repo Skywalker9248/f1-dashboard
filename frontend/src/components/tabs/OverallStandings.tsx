@@ -8,7 +8,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
   Alert,
   Box,
   Grid,
@@ -19,6 +18,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ReactECharts from "echarts-for-react";
 import API from "../../axios";
+import LoadingUI from "../loadingUI";
 
 interface DriverStanding {
   position: number;
@@ -68,12 +68,7 @@ const OverallStandings = () => {
       });
   }, []);
 
-  if (loading)
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
+  if (loading) return <LoadingUI />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
   const displayedDrivers = showAllDrivers
