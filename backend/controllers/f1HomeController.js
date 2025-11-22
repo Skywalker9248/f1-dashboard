@@ -8,11 +8,9 @@ exports.getLastRaceResults = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Controller Error (getLastRaceResults):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve last race data.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve last race data.",
+    });
   }
 };
 
@@ -23,11 +21,9 @@ exports.getDriverStandings = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Controller Error (getDriverStandings):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve driver standings.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve driver standings.",
+    });
   }
 };
 
@@ -38,12 +34,10 @@ exports.getConstructorStandings = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Controller Error (getConstructorStandings):", error.message);
-    res
-      .status(500)
-      .json({
-        message:
-          "Internal Server Error: Could not retrieve constructor standings.",
-      });
+    res.status(500).json({
+      message:
+        "Internal Server Error: Could not retrieve constructor standings.",
+    });
   }
 };
 
@@ -54,11 +48,9 @@ exports.getNextRace = async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Controller Error (getNextRace):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve next race data.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve next race data.",
+    });
   }
 };
 
@@ -69,11 +61,9 @@ exports.getDrivers = async (req, res) => {
     res.json(drivers);
   } catch (error) {
     console.error("Controller Error (getDrivers):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve driver list.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve driver list.",
+    });
   }
 };
 
@@ -84,11 +74,9 @@ exports.getDriverStats = async (req, res) => {
     res.json(stats);
   } catch (error) {
     console.error("Controller Error (getDriverStats):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve driver stats.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve driver stats.",
+    });
   }
 };
 
@@ -99,10 +87,22 @@ exports.getConstructorWins = async (req, res) => {
     res.json(wins);
   } catch (error) {
     console.error("Controller Error (getConstructorWins):", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Internal Server Error: Could not retrieve constructor wins.",
-      });
+    res.status(500).json({
+      message: "Internal Server Error: Could not retrieve constructor wins.",
+    });
+  }
+};
+
+// Controller for /api/f1/driver-race-positions
+exports.getDriverRacePositions = async (req, res) => {
+  try {
+    const positions = await f1Service.getDriverRacePositions();
+    res.json(positions);
+  } catch (error) {
+    console.error("Controller Error (getDriverRacePositions):", error.message);
+    res.status(500).json({
+      message:
+        "Internal Server Error: Could not retrieve driver race positions.",
+    });
   }
 };

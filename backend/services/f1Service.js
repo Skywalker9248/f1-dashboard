@@ -538,6 +538,201 @@ exports.getConstructorWins = async () => {
     const now = new Date();
 
     // Fetch all race sessions from OpenF1
+    sessions.push(
+      createSession(
+        "Practice 1",
+        raceData.FirstPractice.date,
+        raceData.FirstPractice.time,
+        60
+      )
+    );
+    if (raceData.SecondPractice)
+      sessions.push(
+        createSession(
+          "Practice 2",
+          raceData.SecondPractice.date,
+          raceData.SecondPractice.time,
+          60
+        )
+      );
+    if (raceData.ThirdPractice)
+      sessions.push(
+        createSession(
+          "Practice 3",
+          raceData.ThirdPractice.date,
+          raceData.ThirdPractice.time,
+          60
+        )
+      );
+    if (raceData.SprintQualifying)
+      sessions.push(
+        createSession(
+          "Sprint Qualifying",
+          raceData.SprintQualifying.date,
+          raceData.SprintQualifying.time,
+          45
+        )
+      );
+    if (raceData.Sprint)
+      sessions.push(
+        createSession("Sprint", raceData.Sprint.date, raceData.Sprint.time, 60)
+      );
+    if (raceData.Qualifying)
+      sessions.push(
+        createSession(
+          "Qualifying",
+          raceData.Qualifying.date,
+          raceData.Qualifying.time,
+          60
+        )
+      );
+
+    // Race (usually 2 hours window)
+    sessions.push(createSession("Race", raceData.date, raceData.time, 120));
+
+    // Sort by time
+    sessions.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
+
+    return {
+      circuit: raceData.Circuit.circuitName,
+      location: raceData.Circuit.Location.locality,
+      country: raceData.Circuit.Location.country,
+      raceDate: `${raceData.date}T${raceData.time}`,
+      meetingKey: raceData.round, // Using round number as key
+      sessions: sessions,
+      weather: weatherData,
+    };
+  } catch (error) {
+    console.error("Error fetching next race:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get list of all drivers (for dropdowns/lists)
+ */
+exports.getDriverList = async () => {
+  try {
+    const session = await getLatestRaceSession();
+    if (!session) return [];
+
+    const res = await axios.get(
+      `${OPENF1_URL}/drivers?session_key=${session.session_key}`
+    );
+
+    // Dedup drivers
+    const seen = new Set();
+    return res.data
+      .filter((d) => {
+        if (seen.has(d.driver_number)) return false;
+        seen.add(d.driver_number);
+        return true;
+      })
+      .map((d) => ({
+        number: d.driver_number,
+        name: d.full_name,
+        acronym: d.name_acronym,
+        team: d.team_name,
+        headshotUrl: d.headshot_url,
+      }));
+  } catch (error) {
+    return [];
+  }
+};
+/**
+ * Get Driver Statistics (DNFs and Average Grid Position)
+ * Aggregates data from all races in the current season
+ */
+exports.getDriverStats = async () => {
+  try {
+    const currentYear = new Date().getFullYear();
+
+    //  Fetch all race results for the season
+    const response = await axios.get(
+      `${JOLPICA_URL}/${currentYear}/results.json?limit=1000`
+    );
+
+    const races = response.data?.MRData?.RaceTable?.Races || [];
+
+    if (races.length === 0) {
+      return { season: currentYear, stats: [] };
+    }
+
+    // Aggregate stats per driver
+    const driverStats = {};
+
+    races.forEach((race) => {
+      race.Results.forEach((result) => {
+        const driverCode = result.Driver.code;
+        const driverName = `${result.Driver.givenName} ${result.Driver.familyName}`;
+        const teamName = result.Constructor.name;
+
+        if (!driverStats[driverCode]) {
+          driverStats[driverCode] = {
+            driver: driverName,
+            driverAcronym: driverCode,
+            driverNumber: parseInt(result.Driver.permanentNumber),
+            team: teamName,
+            teamColor: getTeamColor(teamName),
+            dnfCount: 0,
+            totalRaces: 0,
+            gridPositions: [],
+          };
+        }
+
+        driverStats[driverCode].totalRaces++;
+
+        // Count DNFs (status is not "Finished" and contains various failure reasons)
+        const status = result.status || "";
+        if (status !== "Finished" && !status.includes("+")) {
+          driverStats[driverCode].dnfCount++;
+        }
+
+        // Track grid positions for averaging
+        const gridPos = parseInt(result.grid);
+        if (!isNaN(gridPos) && gridPos > 0) {
+          driverStats[driverCode].gridPositions.push(gridPos);
+        }
+      });
+    });
+
+    // Calculate average grid position for each driver
+    const stats = Object.values(driverStats).map((driver) => ({
+      driver: driver.driver,
+      driverAcronym: driver.driverAcronym,
+      driverNumber: driver.driverNumber,
+      team: driver.team,
+      teamColor: driver.teamColor,
+      dnfCount: driver.dnfCount,
+      totalRaces: driver.totalRaces,
+      averageGridPosition:
+        driver.gridPositions.length > 0
+          ? driver.gridPositions.reduce((a, b) => a + b, 0) /
+            driver.gridPositions.length
+          : null,
+    }));
+
+    // Sort by driver acronym for consistency
+    stats.sort((a, b) => a.driverAcronym.localeCompare(b.driverAcronym));
+
+    return { season: currentYear, stats };
+  } catch (error) {
+    console.error("Error fetching driver stats:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get Constructor Wins
+ * Counts race wins for each constructor in the current season
+ * Uses OpenF1 API for more complete and accurate race data
+ */
+exports.getConstructorWins = async () => {
+  try {
+    const currentYear = new Date().getFullYear();
+    const now = new Date();
+
+    // Fetch all race sessions from OpenF1
     const sessionsRes = await axios.get(
       `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
     );
@@ -607,6 +802,131 @@ exports.getConstructorWins = async () => {
     return { season: currentYear, wins };
   } catch (error) {
     console.error("Error fetching constructor wins:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Get Driver Race Positions
+ * Fetches finishing positions for all drivers across all races in the season
+ * Used for visualizing driver performance trends
+ */
+exports.getDriverRacePositions = async () => {
+  try {
+    const currentYear = new Date().getFullYear();
+    const now = new Date();
+
+    // Fetch all race sessions from OpenF1
+    const sessionsRes = await axios.get(
+      `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
+    );
+
+    const sessions = sessionsRes.data || [];
+
+    // Filter for completed races only and sort by date
+    const completedRaces = sessions
+      .filter((s) => new Date(s.date_start) < now)
+      .sort((a, b) => new Date(a.date_start) - new Date(b.date_start));
+
+    if (completedRaces.length === 0) {
+      return { season: currentYear, races: [], drivers: [] };
+    }
+
+    const driverData = {};
+    const raceNames = [];
+
+    // Fetch results for each completed race
+    for (const session of completedRaces) {
+      try {
+        // Add small delay to avoid rate limiting (200ms between requests)
+        if (raceNames.length > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+
+        // Get race results
+        const [resultsRes, driversRes] = await Promise.all([
+          axios.get(
+            `${OPENF1_URL}/session_result?session_key=${session.session_key}`
+          ),
+          axios.get(`${OPENF1_URL}/drivers?session_key=${session.session_key}`),
+        ]);
+
+        const results = resultsRes.data;
+        const drivers = driversRes.data;
+
+        if (!results || results.length === 0) {
+          console.warn(
+            `No results for ${session.circuit_short_name}, skipping`
+          );
+          continue;
+        }
+
+        // Only add race name after successful fetch
+        raceNames.push(session.circuit_short_name);
+
+        // Create driver map for team colors
+        const driverMap = {};
+        drivers.forEach((d) => {
+          driverMap[d.driver_number] = {
+            fullName: d.full_name,
+            acronym: d.name_acronym,
+            teamColor: d.team_colour,
+          };
+        });
+
+        // Pre-initialize all drivers for this race to maintain array alignment
+        drivers.forEach((d) => {
+          const driverKey = d.name_acronym;
+          if (!driverData[driverKey]) {
+            driverData[driverKey] = {
+              driverName: d.full_name,
+              driverAcronym: d.name_acronym,
+              teamColor: d.team_colour,
+              positions: new Array(raceNames.length - 1).fill(null), // Fill previous races with null
+            };
+          }
+        });
+
+        // Mark all drivers as absent (null) for this race first
+        Object.keys(driverData).forEach((key) => {
+          // Add null for this race if driver's array is shorter
+          while (driverData[key].positions.length < raceNames.length) {
+            driverData[key].positions.push(null);
+          }
+        });
+
+        // Process each result and update actual positions
+        results.forEach((result) => {
+          const driverInfo = driverMap[result.driver_number];
+          if (!driverInfo) return;
+
+          const driverKey = driverInfo.acronym;
+
+          // Update position for this race (last position in array)
+          const position =
+            result.dnf || result.dns || result.dsq ? null : result.position;
+
+          driverData[driverKey].positions[raceNames.length - 1] = position;
+        });
+      } catch (raceError) {
+        console.warn(
+          `Error fetching results for session ${session.session_key} (${session.circuit_short_name}):`,
+          raceError.message
+        );
+        // Skip this race entirely - don't add to raceNames or positions
+        continue;
+      }
+    }
+
+    const drivers = Object.values(driverData);
+
+    return {
+      season: currentYear,
+      races: raceNames,
+      drivers: drivers,
+    };
+  } catch (error) {
+    console.error("Error fetching driver race positions:", error.message);
     throw error;
   }
 };

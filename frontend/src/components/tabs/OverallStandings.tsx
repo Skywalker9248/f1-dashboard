@@ -7,6 +7,7 @@ import ConstructorStandingsTable from "./standings/ConstructorStandingsTable";
 import DriverDNFChart from "./standings/DriverDNFChart";
 import DriverGridPositionChart from "./standings/DriverGridPositionChart";
 import ConstructorWinsChart from "./standings/ConstructorWinsChart";
+import DriverRacePositionsChart from "./standings/DriverRacePositionsChart";
 
 interface DriverStanding {
   position: number;
@@ -42,6 +43,13 @@ interface ConstructorWin {
   wins: number;
 }
 
+interface DriverPosition {
+  driverName: string;
+  driverAcronym: string;
+  teamColor: string;
+  positions: (number | null)[];
+}
+
 const OverallStandings = () => {
   const [driverStandings, setDriverStandings] = useState<DriverStanding[]>([]);
   const [constructorStandings, setConstructorStandings] = useState<
@@ -49,6 +57,10 @@ const OverallStandings = () => {
   >([]);
   const [driverStats, setDriverStats] = useState<DriverStat[]>([]);
   const [constructorWins, setConstructorWins] = useState<ConstructorWin[]>([]);
+  const [racePositions, setRacePositions] = useState<{
+    races: string[];
+    drivers: DriverPosition[];
+  }>({ races: [], drivers: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +70,7 @@ const OverallStandings = () => {
       API.get("/api/f1/standings/constructors"),
       API.get("/api/f1/driver-stats"),
       API.get("/api/f1/constructor-wins"),
+      API.get("/api/f1/driver-race-positions"),
     ])
       .then(
         ([
@@ -65,6 +78,7 @@ const OverallStandings = () => {
           constructorsResponse,
           statsResponse,
           winsResponse,
+          positionsResponse,
         ]) => {
           // Handle new response format with season info
           const drivers =
@@ -73,11 +87,16 @@ const OverallStandings = () => {
             constructorsResponse.data.standings || constructorsResponse.data;
           const stats = statsResponse.data.stats || statsResponse.data;
           const wins = winsResponse.data.wins || winsResponse.data;
+          const positions = {
+            races: positionsResponse.data.races || [],
+            drivers: positionsResponse.data.drivers || [],
+          };
 
           setDriverStandings(drivers);
           setConstructorStandings(constructors);
           setDriverStats(stats);
           setConstructorWins(wins);
+          setRacePositions(positions);
           setLoading(false);
         }
       )
@@ -105,6 +124,10 @@ const OverallStandings = () => {
 
       {/* Charts Section - Full Width */}
       <Box sx={{ mt: 4 }}>
+        <DriverRacePositionsChart
+          races={racePositions.races}
+          drivers={racePositions.drivers}
+        />
         <DriverDNFChart stats={driverStats} />
         <DriverGridPositionChart stats={driverStats} />
         <ConstructorWinsChart wins={constructorWins} />

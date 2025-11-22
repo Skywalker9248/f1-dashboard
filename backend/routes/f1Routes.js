@@ -25,6 +25,9 @@ router.get("/driver-stats", f1HomeController.getDriverStats);
 // Constructor wins
 router.get("/constructor-wins", f1HomeController.getConstructorWins);
 
+// Driver race positions across all races
+router.get("/driver-race-positions", f1HomeController.getDriverRacePositions);
+
 // Legacy endpoint for backward compatibility
 router.get("/home", f1HomeController.getLastRaceResults);
 
