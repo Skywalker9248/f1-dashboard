@@ -4,8 +4,9 @@ import API from "../../axios";
 import LoadingUI from "../LoadingUI";
 import DriverStandingsTable from "./standings/DriverStandingsTable";
 import ConstructorStandingsTable from "./standings/ConstructorStandingsTable";
-import DriverPointsChart from "./standings/DriverPointsChart";
-import ConstructorPointsChart from "./standings/ConstructorPointsChart";
+import DriverDNFChart from "./standings/DriverDNFChart";
+import DriverGridPositionChart from "./standings/DriverGridPositionChart";
+import ConstructorWinsChart from "./standings/ConstructorWinsChart";
 
 interface DriverStanding {
   position: number;
@@ -25,11 +26,29 @@ interface ConstructorStanding {
   points: number;
 }
 
+interface DriverStat {
+  driver: string;
+  driverAcronym: string;
+  team: string;
+  teamColor: string;
+  dnfCount: number;
+  totalRaces: number;
+  averageGridPosition: number | null;
+}
+
+interface ConstructorWin {
+  team: string;
+  teamColor: string;
+  wins: number;
+}
+
 const OverallStandings = () => {
   const [driverStandings, setDriverStandings] = useState<DriverStanding[]>([]);
   const [constructorStandings, setConstructorStandings] = useState<
     ConstructorStanding[]
   >([]);
+  const [driverStats, setDriverStats] = useState<DriverStat[]>([]);
+  const [constructorWins, setConstructorWins] = useState<ConstructorWin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,16 +56,31 @@ const OverallStandings = () => {
     Promise.all([
       API.get("/api/f1/standings/drivers"),
       API.get("/api/f1/standings/constructors"),
+      API.get("/api/f1/driver-stats"),
+      API.get("/api/f1/constructor-wins"),
     ])
-      .then(([driversResponse, constructorsResponse]) => {
-        // Handle new response format with season info
-        const drivers = driversResponse.data.standings || driversResponse.data;
-        const constructors =
-          constructorsResponse.data.standings || constructorsResponse.data;
-        setDriverStandings(drivers);
-        setConstructorStandings(constructors);
-        setLoading(false);
-      })
+      .then(
+        ([
+          driversResponse,
+          constructorsResponse,
+          statsResponse,
+          winsResponse,
+        ]) => {
+          // Handle new response format with season info
+          const drivers =
+            driversResponse.data.standings || driversResponse.data;
+          const constructors =
+            constructorsResponse.data.standings || constructorsResponse.data;
+          const stats = statsResponse.data.stats || statsResponse.data;
+          const wins = winsResponse.data.wins || winsResponse.data;
+
+          setDriverStandings(drivers);
+          setConstructorStandings(constructors);
+          setDriverStats(stats);
+          setConstructorWins(wins);
+          setLoading(false);
+        }
+      )
       .catch((err) => {
         console.error(err);
         setError(err.message);
@@ -71,8 +105,9 @@ const OverallStandings = () => {
 
       {/* Charts Section - Full Width */}
       <Box sx={{ mt: 4 }}>
-        <DriverPointsChart standings={driverStandings} />
-        <ConstructorPointsChart standings={constructorStandings} />
+        <DriverDNFChart stats={driverStats} />
+        <DriverGridPositionChart stats={driverStats} />
+        <ConstructorWinsChart wins={constructorWins} />
       </Box>
     </Box>
   );

@@ -42,6 +42,7 @@ interface Standing {
   dsq: boolean;
   gapToLeader: number;
   numberOfLaps: number;
+  fastestLapTime: number | null;
 }
 
 interface LastRaceData {
@@ -88,9 +89,23 @@ const LastRace = () => {
 
   const theme = useTheme();
 
+  // Format lap time from seconds to MM:SS.mmm
+  const formatLapTime = (seconds: number | null) => {
+    if (!seconds) return "N/A";
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toFixed(3);
+    return `${mins}:${secs.padStart(6, "0")}`;
+  };
+
+  // Filter drivers with valid lap times and sort by fastest lap
+  const driversWithLaps = sortedStandings.filter((d) => d.fastestLapTime);
+  driversWithLaps.sort(
+    (a, b) => (a.fastestLapTime || 999) - (b.fastestLapTime || 999)
+  );
+
   const chartOption = {
     title: {
-      text: "Race Results",
+      text: "Fastest Lap Times",
       left: "center",
       textStyle: { color: theme.palette.text.primary },
     },
@@ -101,13 +116,15 @@ const LastRace = () => {
       textStyle: { color: theme.palette.text.primary },
       formatter: (params: any) => {
         const dataIndex = params[0].dataIndex;
-        const standing = sortedStandings[dataIndex];
-        return `${standing.driver}<br/>Points: ${standing.points}<br/>Team: ${standing.team}`;
+        const driver = driversWithLaps[dataIndex];
+        return `${driver.driver}<br/>Fastest Lap: ${formatLapTime(
+          driver.fastestLapTime
+        )}<br/>Team: ${driver.team}`;
       },
     },
     xAxis: {
       type: "category",
-      data: sortedStandings.map((d) => d.driverAcronym),
+      data: driversWithLaps.map((d) => d.driverAcronym),
       axisLabel: {
         rotate: 45,
         interval: 0,
@@ -116,22 +133,26 @@ const LastRace = () => {
     },
     yAxis: {
       type: "value",
-      name: "Points",
+      name: "Lap Time (seconds)",
       nameTextStyle: { color: theme.palette.text.secondary },
-      axisLabel: { color: theme.palette.text.secondary },
+      axisLabel: {
+        color: theme.palette.text.secondary,
+        formatter: (value: number) => formatLapTime(value),
+      },
     },
     series: [
       {
-        name: "Points",
+        name: "Fastest Lap",
         type: "bar",
-        data: sortedStandings.map((d) => ({
-          value: d.points,
+        data: driversWithLaps.map((d) => ({
+          value: d.fastestLapTime,
           itemStyle: { color: `#${d.teamColor || "1976d2"}` },
         })),
         label: {
           show: true,
           position: "top",
           color: theme.palette.text.primary,
+          formatter: (params: any) => formatLapTime(params.value),
         },
       },
     ],
