@@ -181,7 +181,7 @@ const LastRace = () => {
                       <TableCell>{row.team}</TableCell>
                       <TableCell align="right"><strong>{row.points}</strong></TableCell>
                       <TableCell align="right">
-                        {row.position === 1 ? '-' : `+${row.gapToLeader.toFixed(3)}s`}
+                        {row.position === 1 ? '-' : `+${(row.gapToLeader || 0).toFixed(3)}s`}
                       </TableCell>
                       <TableCell align="center">
                         {row.dnf && <Chip label="DNF" size="small" color="error" />}

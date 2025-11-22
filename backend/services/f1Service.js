@@ -198,10 +198,13 @@ exports.getLastRaceResults = async () => {
                     teamColor: info.teamColor,
                     points: points,
                     hasFastestLap: hasFastestLap,
-                    time: result.time || 'DNF', // Gap to leader or DNF
+                    gapToLeader: result.gap_to_leader || 0,
+                    time: result.time || 'DNF',
                     headshotUrl: info.headshotUrl,
                     countryCode: info.countryCode,
-                    dnf: result.status > 0 && result.status !== 'Finished' // Simple DNF check
+                    dnf: result.dnf,
+                    dns: result.dns,
+                    dsq: result.dsq
                 };
             });
 
