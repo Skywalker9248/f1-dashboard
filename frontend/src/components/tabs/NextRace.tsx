@@ -21,7 +21,7 @@ import API from "../../axios"; // Ensure this path matches your project
 import ScheduleWidget from "../widgets/ScheduleWidget";
 import WeatherWidget from "../widgets/WeatherWidget";
 import { calculateCountdown } from "../../../helpers/utils";
-import LoadingUI from "../loadingUI";
+import LoadingUI from "../LoadingUI";
 
 // --- Types ---
 // These interfaces match the ones in the widgets.

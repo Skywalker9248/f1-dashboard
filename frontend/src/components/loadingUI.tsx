@@ -29,7 +29,7 @@ export default function LoadingUI() {
         strategyPhrases[Math.floor(Math.random() * strategyPhrases.length)];
       setLoadingText(randomPhrase);
       setSubText(Math.random() > 0.5 ? "Standby" : "Analyzing");
-    }, 2500);
+    }, 1000);
 
     const progressInterval = setInterval(() => {
       setProgress((prev) => {

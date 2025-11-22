@@ -16,7 +16,7 @@ import {
   Chip,
   useTheme,
 } from "@mui/material";
-import LoadingUI from "../loadingUI";
+import LoadingUI from "../LoadingUI";
 
 interface SessionInfo {
   circuit: string;

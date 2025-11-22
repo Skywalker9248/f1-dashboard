@@ -18,7 +18,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ReactECharts from "echarts-for-react";
 import API from "../../axios";
-import LoadingUI from "../loadingUI";
+import LoadingUI from "../LoadingUI";
 
 interface DriverStanding {
   position: number;
