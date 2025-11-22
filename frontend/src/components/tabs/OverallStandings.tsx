@@ -155,7 +155,7 @@ const OverallStandings = () => {
       {/* Tables Section - Side by Side */}
       <Grid container spacing={4} sx={{ mb: 4 }}>
         {/* Driver Standings */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
               Driver Championship
@@ -202,7 +202,7 @@ const OverallStandings = () => {
           </Paper>
         </Grid>
         {/* Constructor Standings */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
               Constructor Championship

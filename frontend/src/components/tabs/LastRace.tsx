@@ -145,7 +145,7 @@ const LastRace = () => {
       {/* Session Information */}
       <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.default' }}>
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
               {sessionInfo.sessionName}
             </Typography>
@@ -153,7 +153,7 @@ const LastRace = () => {
               {sessionInfo.circuit} - {sessionInfo.country}
             </Typography>
           </Grid>
-          <Grid item xs={12} md={6} sx={{ textAlign: { md: 'right' } }}>
+          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: 'right' } }}>
             <Typography variant="h6">{formatDate(sessionInfo.date)}</Typography>
             <Typography variant="body2" color="text.secondary">
               {sessionInfo.location}
@@ -164,7 +164,7 @@ const LastRace = () => {
 
       {/* Results Table */}
       <Grid container spacing={4}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column' }}>
             <Typography component="h2" variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
               Race Results
