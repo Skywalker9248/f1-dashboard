@@ -13,6 +13,7 @@ import {
   Box,
   Grid,
   Button,
+  useTheme,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -74,26 +75,42 @@ const OverallStandings = () => {
 
   const displayedDrivers = showAllDrivers ? driverStandings : driverStandings.slice(0, 10);
 
+  const theme = useTheme();
+
   const driverChartOption = {
     title: {
       text: 'Driver Championship Points',
       left: 'center',
-      textStyle: { fontSize: 18, fontWeight: 'bold' },
+      textStyle: { fontSize: 18, fontWeight: 'bold', color: theme.palette.text.primary },
     },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    tooltip: { 
+      trigger: 'axis', 
+      axisPointer: { type: 'shadow' },
+      backgroundColor: theme.palette.background.paper,
+      textStyle: { color: theme.palette.text.primary }
+    },
     grid: { left: '1%', right: '1%', bottom: '15%', containLabel: true },
     xAxis: {
       type: 'category',
       data: driverStandings.slice(0, 10).map((d) => d.driverAcronym),
-      axisLabel: { rotate: 45, interval: 0 },
+      axisLabel: { 
+        rotate: 45, 
+        interval: 0,
+        color: theme.palette.text.secondary
+      },
     },
-    yAxis: { type: 'value', name: 'Points' },
+    yAxis: { 
+      type: 'value', 
+      name: 'Points',
+      nameTextStyle: { color: theme.palette.text.secondary },
+      axisLabel: { color: theme.palette.text.secondary }
+    },
     series: [
       {
         name: 'Points',
         type: 'bar',
         data: driverStandings.slice(0, 10).map((d) => ({ value: d.points, itemStyle: { color: `#${d.teamColor}` } })),
-        label: { show: true, position: 'top' },
+        label: { show: true, position: 'top', color: theme.palette.text.primary },
       },
     ],
   };
@@ -102,10 +119,19 @@ const OverallStandings = () => {
     title: {
       text: 'Constructor Championship Points',
       left: 'center',
-      textStyle: { fontSize: 18, fontWeight: 'bold' },
+      textStyle: { fontSize: 18, fontWeight: 'bold', color: theme.palette.text.primary },
     },
-    tooltip: { trigger: 'item' },
-    legend: { orient: 'vertical', left: 'left', top: 'middle' },
+    tooltip: { 
+      trigger: 'item',
+      backgroundColor: theme.palette.background.paper,
+      textStyle: { color: theme.palette.text.primary }
+    },
+    legend: { 
+      orient: 'vertical', 
+      left: 'left', 
+      top: 'middle',
+      textStyle: { color: theme.palette.text.secondary }
+    },
     series: [
       {
         name: 'Points',
@@ -113,8 +139,12 @@ const OverallStandings = () => {
         radius: ['40%', '70%'],
         center: ['60%', '50%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-        label: { show: true, formatter: '{b}: {c}' },
+        itemStyle: { 
+          borderRadius: 10, 
+          borderColor: theme.palette.background.paper, 
+          borderWidth: 2 
+        },
+        label: { show: true, formatter: '{b}: {c}', color: theme.palette.text.primary },
         data: constructorStandings.map((c) => ({ value: c.points, name: c.team, itemStyle: { color: `#${c.teamColor}` } })),
       },
     ],
@@ -125,7 +155,7 @@ const OverallStandings = () => {
       {/* Tables Section - Side by Side */}
       <Grid container spacing={4} sx={{ mb: 4 }}>
         {/* Driver Standings */}
-        <Grid item xs={12} md={7}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
               Driver Championship
@@ -142,7 +172,7 @@ const OverallStandings = () => {
                 </TableHead>
                 <TableBody>
                   {displayedDrivers.map((row) => (
-                    <TableRow key={row.position} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                    <TableRow key={row.position} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box sx={{ width: 4, height: 24, backgroundColor: `#${row.teamColor}`, borderRadius: 1 }} />
@@ -172,7 +202,7 @@ const OverallStandings = () => {
           </Paper>
         </Grid>
         {/* Constructor Standings */}
-        <Grid item xs={12} md={5}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
               Constructor Championship
@@ -188,7 +218,7 @@ const OverallStandings = () => {
                 </TableHead>
                 <TableBody>
                   {constructorStandings.map((row) => (
-                    <TableRow key={row.position} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                    <TableRow key={row.position} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box sx={{ width: 4, height: 24, backgroundColor: `#${row.teamColor}`, borderRadius: 1 }} />

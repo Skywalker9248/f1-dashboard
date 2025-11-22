@@ -46,10 +46,10 @@ const Home = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
       <Navbar />
       <Container maxWidth={false}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'white', borderRadius: 1 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'background.paper', borderRadius: 1 }}>
           <Tabs 
             value={value} 
             onChange={handleChange} 
@@ -61,10 +61,10 @@ const Home = () => {
                 fontSize: '1rem'
               },
               '& .Mui-selected': {
-                color: '#E10600'
+                color: 'primary.main'
               },
               '& .MuiTabs-indicator': {
-                backgroundColor: '#E10600',
+                backgroundColor: 'primary.main',
                 height: 3
               }
             }}

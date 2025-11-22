@@ -111,7 +111,7 @@ const NextRace = () => {
       {/* Race Header */}
       <Paper sx={{ p: 4, mb: 4, background: 'linear-gradient(135deg, #E10600 0%, #8B0000 100%)', color: 'white' }}>
         <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={8}>
+          <Grid xs={12} md={8}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
               <FlagIcon />
               <Typography variant="overline" sx={{ fontSize: '0.875rem' }}>Next Race</Typography>
@@ -135,7 +135,7 @@ const NextRace = () => {
             </Box>
           </Grid>
           {countdown && (
-            <Grid item xs={12} md={4}>
+            <Grid xs={12} md={4}>
               <Card sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(10px)' }}>
                 <CardContent sx={{ p: 3 }}>
                   <Typography variant="overline" sx={{ color: 'white', opacity: 0.8, fontSize: '0.875rem' }}>
@@ -179,7 +179,7 @@ const NextRace = () => {
                   const durationMinutes = Math.round((end.getTime() - startDate.getTime()) / (1000 * 60));
                   
                   return (
-                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                           {session.sessionName}

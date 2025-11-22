@@ -15,6 +15,7 @@ import {
   Alert,
   Box,
   Chip,
+  useTheme,
 } from '@mui/material';
 
 interface SessionInfo {
@@ -90,11 +91,19 @@ const LastRace = () => {
     return a.position - b.position;
   });
 
+  const theme = useTheme();
+
   const chartOption = {
-    title: { text: 'Race Results', left: 'center' },
+    title: { 
+      text: 'Race Results', 
+      left: 'center',
+      textStyle: { color: theme.palette.text.primary }
+    },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
+      backgroundColor: theme.palette.background.paper,
+      textStyle: { color: theme.palette.text.primary },
       formatter: (params: any) => {
         const dataIndex = params[0].dataIndex;
         const standing = sortedStandings[dataIndex];
@@ -104,15 +113,24 @@ const LastRace = () => {
     xAxis: {
       type: 'category',
       data: sortedStandings.map((d) => d.driverAcronym),
-      axisLabel: { rotate: 45, interval: 0 },
+      axisLabel: { 
+        rotate: 45, 
+        interval: 0,
+        color: theme.palette.text.secondary
+      },
     },
-    yAxis: { type: 'value', name: 'Points' },
+    yAxis: { 
+      type: 'value', 
+      name: 'Points',
+      nameTextStyle: { color: theme.palette.text.secondary },
+      axisLabel: { color: theme.palette.text.secondary }
+    },
     series: [
       {
         name: 'Points',
         type: 'bar',
         data: sortedStandings.map((d) => ({ value: d.points, itemStyle: { color: `#${d.teamColor || '1976d2'}` } })),
-        label: { show: true, position: 'top' },
+        label: { show: true, position: 'top', color: theme.palette.text.primary },
       },
     ],
   };
@@ -125,7 +143,7 @@ const LastRace = () => {
   return (
     <Box sx={{ py: 2 }}>
       {/* Session Information */}
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f5f5f5' }}>
+      <Paper sx={{ p: 3, mb: 4, backgroundColor: 'background.default' }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 1 }}>
@@ -165,7 +183,7 @@ const LastRace = () => {
                 </TableHead>
                 <TableBody>
                   {sortedStandings.map((row, index) => (
-                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                    <TableRow key={index} sx={{ '&:hover': { backgroundColor: 'action.hover' } }}>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Box sx={{ width: 4, height: 24, backgroundColor: `#${row.teamColor}`, borderRadius: 1 }} />
