@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Container, Tabs, Tab, Box } from '@mui/material';
-import Navbar from '../components/Navbar';
-import OverallStandings from '../components/tabs/OverallStandings';
-import LastRace from '../components/tabs/LastRace';
-import NextRace from '../components/tabs/NextRace';
+import React, { useState } from "react";
+import { Container, Tabs, Tab, Box } from "@mui/material";
+import Navbar from "../components/Navbar";
+import OverallStandings from "../components/tabs/OverallStandings";
+import LastRace from "../components/tabs/LastRace";
+import NextRace from "../components/tabs/NextRace";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -22,11 +22,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ py: 4 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ py: 4 }}>{children}</Box>}
     </div>
   );
 }
@@ -34,39 +30,46 @@ function TabPanel(props: TabPanelProps) {
 function a11yProps(index: number) {
   return {
     id: `tab-${index}`,
-    'aria-controls': `tabpanel-${index}`,
+    "aria-controls": `tabpanel-${index}`,
   };
 }
 
 const Home = () => {
   const [value, setValue] = useState(0);
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleChange = (_: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
       <Navbar />
       <Container maxWidth={false}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', backgroundColor: 'background.paper', borderRadius: 1 }}>
-          <Tabs 
-            value={value} 
-            onChange={handleChange} 
+        <Box
+          sx={{
+            borderBottom: 1,
+            borderColor: "divider",
+            backgroundColor: "background.paper",
+            borderRadius: 1,
+          }}
+        >
+          <Tabs
+            value={value}
+            onChange={handleChange}
             aria-label="F1 Dashboard tabs"
             variant="fullWidth"
             sx={{
-              '& .MuiTab-root': {
-                fontWeight: 'bold',
-                fontSize: '1rem'
+              "& .MuiTab-root": {
+                fontWeight: "bold",
+                fontSize: "1rem",
               },
-              '& .Mui-selected': {
-                color: 'primary.main'
+              "& .Mui-selected": {
+                color: "primary.main",
               },
-              '& .MuiTabs-indicator': {
-                backgroundColor: 'primary.main',
-                height: 3
-              }
+              "& .MuiTabs-indicator": {
+                backgroundColor: "primary.main",
+                height: 3,
+              },
             }}
           >
             <Tab label="Overall Standings" {...a11yProps(0)} />
@@ -74,7 +77,7 @@ const Home = () => {
             <Tab label="Next Race" {...a11yProps(2)} />
           </Tabs>
         </Box>
-        
+
         <TabPanel value={value} index={0}>
           <OverallStandings />
         </TabPanel>
