@@ -26,6 +26,62 @@ function getTeamColor(teamName) {
   return key ? TEAM_COLORS[key] : "000000";
 }
 
+// --- CACHING & QUEUE HELPER ---
+const requestCache = new Map();
+const requestQueue = [];
+let isProcessingQueue = false;
+const MIN_REQUEST_DELAY = 300; // ms
+
+/**
+ * Process the request queue one by one with delay
+ */
+async function processQueue() {
+  if (isProcessingQueue || requestQueue.length === 0) return;
+
+  isProcessingQueue = true;
+
+  while (requestQueue.length > 0) {
+    const { url, config, resolve, reject } = requestQueue.shift();
+
+    try {
+      const response = await axios.get(url, config);
+      resolve(response);
+    } catch (error) {
+      reject(error);
+    }
+
+    // Wait before next request
+    await new Promise((r) => setTimeout(r, MIN_REQUEST_DELAY));
+  }
+
+  isProcessingQueue = false;
+}
+
+/**
+ * Fetch with in-memory caching and global rate limiting
+ * @param {string} url
+ * @param {object} config
+ * @returns {Promise<any>}
+ */
+async function fetchWithCache(url, config = {}) {
+  const key = url + JSON.stringify(config);
+
+  if (requestCache.has(key)) {
+    return requestCache.get(key);
+  }
+
+  const promise = new Promise((resolve, reject) => {
+    requestQueue.push({ url, config, resolve, reject });
+    processQueue();
+  }).catch((err) => {
+    requestCache.delete(key); // Remove from cache on error
+    throw err;
+  });
+
+  requestCache.set(key, promise);
+  return promise;
+}
+
 // --- CHAMPIONSHIP STANDINGS (Via Jolpica) ---
 
 /**
@@ -455,7 +511,7 @@ exports.getDriverStats = async () => {
     const now = new Date();
 
     // Fetch all race sessions from OpenF1
-    const sessionsRes = await axios.get(
+    const sessionsRes = await fetchWithCache(
       `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
     );
 
@@ -474,16 +530,15 @@ exports.getDriverStats = async () => {
     // Fetch results for each completed race
     for (const session of completedRaces) {
       try {
-        // Add small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
         // Get race results and position data
         const [resultsRes, driversRes, positionRes] = await Promise.all([
-          axios.get(
+          fetchWithCache(
             `${OPENF1_URL}/session_result?session_key=${session.session_key}`
           ),
-          axios.get(`${OPENF1_URL}/drivers?session_key=${session.session_key}`),
-          axios.get(
+          fetchWithCache(
+            `${OPENF1_URL}/drivers?session_key=${session.session_key}`
+          ),
+          fetchWithCache(
             `${OPENF1_URL}/position?session_key=${session.session_key}`
           ),
         ]);
@@ -629,7 +684,7 @@ exports.getConstructorWins = async () => {
     const now = new Date();
 
     // Fetch all race sessions from OpenF1
-    const sessionsRes = await axios.get(
+    const sessionsRes = await fetchWithCache(
       `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
     );
 
@@ -648,28 +703,40 @@ exports.getConstructorWins = async () => {
     // Fetch results for each completed race
     for (const session of completedRaces) {
       try {
-        // Add delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
         // Get race results
-        const resultsRes = await axios.get(
+        const resultsRes = await fetchWithCache(
           `${OPENF1_URL}/session_result?session_key=${session.session_key}`
         );
         const results = resultsRes.data;
 
-        if (!results || results.length === 0) continue;
+        if (!results || results.length === 0) {
+          console.warn(
+            `[getConstructorWins] No results for session ${session.session_key} (${session.location})`
+          );
+          continue;
+        }
 
         // Find the winner (position 1)
         const winner = results.find((r) => r.position === 1);
-        if (!winner) continue;
+        if (!winner) {
+          console.warn(
+            `[getConstructorWins] No winner found for session ${session.session_key}`
+          );
+          continue;
+        }
 
         // Get driver info to get team name
-        const driversRes = await axios.get(
+        const driversRes = await fetchWithCache(
           `${OPENF1_URL}/drivers?session_key=${session.session_key}&driver_number=${winner.driver_number}`
         );
         const driverInfo = driversRes.data[0];
 
-        if (!driverInfo) continue;
+        if (!driverInfo) {
+          console.warn(
+            `[getConstructorWins] No driver info for winner ${winner.driver_number} in session ${session.session_key}`
+          );
+          continue;
+        }
 
         const teamName = driverInfo.team_name;
 
@@ -685,7 +752,7 @@ exports.getConstructorWins = async () => {
         constructorWins[teamName].wins++;
       } catch (raceError) {
         console.warn(
-          `Error fetching results for session ${session.session_key}:`,
+          `[getConstructorWins] Error fetching results for session ${session.session_key}:`,
           raceError.message
         );
         // Continue with next race even if one fails
@@ -716,7 +783,7 @@ exports.getDriverRacePositions = async () => {
     const now = new Date();
 
     // Fetch all race sessions from OpenF1
-    const sessionsRes = await axios.get(
+    const sessionsRes = await fetchWithCache(
       `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
     );
 
@@ -737,17 +804,14 @@ exports.getDriverRacePositions = async () => {
     // Fetch results for each completed race
     for (const session of completedRaces) {
       try {
-        // Add small delay to avoid rate limiting (200ms between requests)
-        if (raceNames.length > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 200));
-        }
-
         // Get race results
         const [resultsRes, driversRes] = await Promise.all([
-          axios.get(
+          fetchWithCache(
             `${OPENF1_URL}/session_result?session_key=${session.session_key}`
           ),
-          axios.get(`${OPENF1_URL}/drivers?session_key=${session.session_key}`),
+          fetchWithCache(
+            `${OPENF1_URL}/drivers?session_key=${session.session_key}`
+          ),
         ]);
 
         const results = resultsRes.data;
