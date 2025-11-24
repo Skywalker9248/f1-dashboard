@@ -28,7 +28,7 @@ interface SessionInfo {
 }
 
 interface Standing {
-  position: number;
+  position: number | null;
   driver: string;
   driverAcronym: string;
   driverNumber: number;
@@ -40,7 +40,7 @@ interface Standing {
   dnf: boolean;
   dns: boolean;
   dsq: boolean;
-  gapToLeader: number;
+  gapToLeader: number | string;
   numberOfLaps: number;
   fastestLapTime: number | null;
 }
@@ -84,6 +84,10 @@ const LastRace = () => {
     if (aDidNotFinish && !bDidNotFinish) return 1;
 
     // Both finished or both didn't finish, sort by position
+    // Handle null positions
+    if (a.position === null && b.position === null) return 0;
+    if (a.position === null) return 1;
+    if (b.position === null) return -1;
     return a.position - b.position;
   });
 
@@ -244,7 +248,7 @@ const LastRace = () => {
                               borderRadius: 1,
                             }}
                           />
-                          {row.position}
+                          {row.position ?? "-"}
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -267,6 +271,8 @@ const LastRace = () => {
                       <TableCell align="right">
                         {row.position === 1
                           ? "-"
+                          : typeof row.gapToLeader === "string"
+                          ? row.gapToLeader
                           : `+${(row.gapToLeader || 0).toFixed(3)}s`}
                       </TableCell>
                       <TableCell align="center">
