@@ -34,13 +34,24 @@ const DriverRacePositionsChart = ({
     setDriverLimit(event.target.value as number);
   };
 
-  // Filter to show selected number of drivers (those with most non-null positions)
+  // Filter to show selected number of drivers (by best average finishing position)
   const topDrivers = [...drivers]
-    .map((d) => ({
-      ...d,
-      validRaces: d.positions.filter((p) => p !== null).length,
-    }))
-    .sort((a, b) => b.validRaces - a.validRaces)
+    .map((d) => {
+      const validPositions = d.positions.filter(
+        (p): p is number => p !== null && p !== 21
+      );
+      const avgPosition =
+        validPositions.length > 0
+          ? validPositions.reduce((sum, p) => sum + p, 0) /
+            validPositions.length
+          : 999; // Put drivers with no finishes at the end
+      return {
+        ...d,
+        validRaces: d.positions.filter((p) => p !== null).length,
+        avgPosition,
+      };
+    })
+    .sort((a, b) => a.avgPosition - b.avgPosition) // Lower average position is better
     .slice(0, driverLimit === -1 ? drivers.length : driverLimit);
 
   const chartOption = {
@@ -161,7 +172,7 @@ const DriverRacePositionsChart = ({
       >
         <Typography variant="body2" color="text.secondary">
           Showing {driverLimit === -1 ? "all" : `top ${driverLimit}`} drivers by
-          race participation
+          average position
         </Typography>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <Select
