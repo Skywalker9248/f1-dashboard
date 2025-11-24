@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import {
   Paper,
@@ -35,116 +35,122 @@ const DriverRacePositionsChart = ({
   };
 
   // Filter to show selected number of drivers (by best average finishing position)
-  const topDrivers = [...drivers]
-    .map((d) => {
-      const validPositions = d.positions.filter(
-        (p): p is number => p !== null && p !== 21
-      );
-      const avgPosition =
-        validPositions.length > 0
-          ? validPositions.reduce((sum, p) => sum + p, 0) /
-            validPositions.length
-          : 999; // Put drivers with no finishes at the end
-      return {
-        ...d,
-        validRaces: d.positions.filter((p) => p !== null).length,
-        avgPosition,
-      };
-    })
-    .sort((a, b) => a.avgPosition - b.avgPosition) // Lower average position is better
-    .slice(0, driverLimit === -1 ? drivers.length : driverLimit);
+  // Memoize to prevent unnecessary recalculations
+  const topDrivers = useMemo(() => {
+    return [...drivers]
+      .map((d) => {
+        const validPositions = d.positions.filter(
+          (p): p is number => p !== null && p !== 21
+        );
+        const avgPosition =
+          validPositions.length > 0
+            ? validPositions.reduce((sum, p) => sum + p, 0) /
+              validPositions.length
+            : 999; // Put drivers with no finishes at the end
+        return {
+          ...d,
+          validRaces: d.positions.filter((p) => p !== null).length,
+          avgPosition,
+        };
+      })
+      .sort((a, b) => a.avgPosition - b.avgPosition) // Lower average position is better
+      .slice(0, driverLimit === -1 ? drivers.length : driverLimit);
+  }, [drivers, driverLimit]);
 
-  const chartOption = {
-    title: {
-      text: "Driver Race Positions - Season Trend",
-      left: "center",
-      textStyle: { color: theme.palette.text.primary },
-    },
-    tooltip: {
-      trigger: "axis",
-      backgroundColor: theme.palette.background.paper,
-      textStyle: { color: theme.palette.text.primary },
-      formatter: (params: any) => {
-        const raceIndex = params[0].dataIndex;
-        let tooltip = `<strong>${races[raceIndex]}</strong><br/>`;
-        params.forEach((param: any) => {
-          const position = param.value;
-          if (position === 21) {
-            tooltip += `${param.marker}${param.seriesName}: DNF<br/>`;
-          } else if (position !== null) {
-            tooltip += `${param.marker}${param.seriesName}: P${position}<br/>`;
-          }
-        });
-        return tooltip;
+  const chartOption = useMemo(
+    () => ({
+      title: {
+        text: "Driver Race Positions - Season Trend",
+        left: "center",
+        textStyle: { color: theme.palette.text.primary },
       },
-    },
-    legend: {
-      top: 30,
-      textStyle: { color: theme.palette.text.primary },
-      type: "scroll",
-    },
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "10%",
-      top: "15%",
-      containLabel: true,
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: races,
-      axisLabel: {
-        rotate: 45,
-        interval: 0,
-        color: theme.palette.text.secondary,
-        fontSize: 10,
-      },
-      axisLine: {
-        lineStyle: { color: theme.palette.divider },
-      },
-    },
-    yAxis: {
-      type: "value",
-      name: "Position",
-      inverse: true, // Lower position numbers at top
-      min: 1,
-      max: 21, // Extended to include DNF marker
-      interval: 1,
-      nameTextStyle: { color: theme.palette.text.secondary },
-      axisLabel: {
-        color: theme.palette.text.secondary,
-        formatter: (value: number) => {
-          if (value === 21) return "DNF";
-          return `P${value}`;
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: theme.palette.background.paper,
+        textStyle: { color: theme.palette.text.primary },
+        formatter: (params: any) => {
+          const raceIndex = params[0].dataIndex;
+          let tooltip = `<strong>${races[raceIndex]}</strong><br/>`;
+          params.forEach((param: any) => {
+            const position = param.value;
+            if (position === 21) {
+              tooltip += `${param.marker}${param.seriesName}: DNF<br/>`;
+            } else if (position !== null) {
+              tooltip += `${param.marker}${param.seriesName}: P${position}<br/>`;
+            }
+          });
+          return tooltip;
         },
       },
-      axisLine: {
-        lineStyle: { color: theme.palette.divider },
+      legend: {
+        top: 30,
+        textStyle: { color: theme.palette.text.primary },
+        type: "scroll",
       },
-      splitLine: {
-        lineStyle: { color: theme.palette.divider, opacity: 0.2 },
+      grid: {
+        left: "3%",
+        right: "4%",
+        bottom: "10%",
+        top: "15%",
+        containLabel: true,
       },
-    },
-    series: topDrivers.map((driver) => ({
-      name: driver.driverAcronym,
-      type: "line",
-      data: driver.positions.map((p) => (p === null ? 21 : p)), // Show DNF at position 21
-      connectNulls: true, // Connect lines through DNF positions
-      emphasis: {
-        focus: "series",
+      xAxis: {
+        type: "category",
+        boundaryGap: false,
+        data: races,
+        axisLabel: {
+          rotate: 45,
+          interval: 0,
+          color: theme.palette.text.secondary,
+          fontSize: 10,
+        },
+        axisLine: {
+          lineStyle: { color: theme.palette.divider },
+        },
       },
-      lineStyle: {
-        width: 2,
-        color: `#${driver.teamColor}`,
+      yAxis: {
+        type: "value",
+        name: "Position",
+        inverse: true, // Lower position numbers at top
+        min: 1,
+        max: 21, // Extended to include DNF marker
+        interval: 1,
+        nameTextStyle: { color: theme.palette.text.secondary },
+        axisLabel: {
+          color: theme.palette.text.secondary,
+          formatter: (value: number) => {
+            if (value === 21) return "DNF";
+            return `P${value}`;
+          },
+        },
+        axisLine: {
+          lineStyle: { color: theme.palette.divider },
+        },
+        splitLine: {
+          lineStyle: { color: theme.palette.divider, opacity: 0.2 },
+        },
       },
-      itemStyle: {
-        color: `#${driver.teamColor}`,
-      },
-      symbol: "circle",
-      symbolSize: 6,
-    })),
-  };
+      series: topDrivers.map((driver) => ({
+        name: driver.driverAcronym,
+        type: "line",
+        data: driver.positions.map((p) => (p === null ? 21 : p)), // Show DNF at position 21
+        connectNulls: true, // Connect lines through DNF positions
+        emphasis: {
+          focus: "series",
+        },
+        lineStyle: {
+          width: 2,
+          color: `#${driver.teamColor}`,
+        },
+        itemStyle: {
+          color: `#${driver.teamColor}`,
+        },
+        symbol: "circle",
+        symbolSize: 6,
+      })),
+    }),
+    [races, theme.palette, topDrivers]
+  );
 
   return (
     <Paper
@@ -195,6 +201,8 @@ const DriverRacePositionsChart = ({
       </Box>
       <ReactECharts
         option={chartOption}
+        notMerge={true}
+        lazyUpdate={true}
         style={{ height: "600px", width: "100%" }}
       />
     </Paper>
