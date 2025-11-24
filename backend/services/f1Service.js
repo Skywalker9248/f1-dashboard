@@ -585,81 +585,6 @@ exports.getDriverStats = async () => {
  * Counts race wins for each constructor in the current season
  * Uses OpenF1 API for more complete and accurate race data
  */
-exports.getConstructorWins = async () => {
-  try {
-    const currentYear = new Date().getFullYear();
-    const now = new Date();
-
-    // Fetch all race sessions from OpenF1
-    sessions.push(
-      createSession(
-        "Practice 1",
-        raceData.FirstPractice.date,
-        raceData.FirstPractice.time,
-        60
-      )
-    );
-    if (raceData.SecondPractice)
-      sessions.push(
-        createSession(
-          "Practice 2",
-          raceData.SecondPractice.date,
-          raceData.SecondPractice.time,
-          60
-        )
-      );
-    if (raceData.ThirdPractice)
-      sessions.push(
-        createSession(
-          "Practice 3",
-          raceData.ThirdPractice.date,
-          raceData.ThirdPractice.time,
-          60
-        )
-      );
-    if (raceData.SprintQualifying)
-      sessions.push(
-        createSession(
-          "Sprint Qualifying",
-          raceData.SprintQualifying.date,
-          raceData.SprintQualifying.time,
-          45
-        )
-      );
-    if (raceData.Sprint)
-      sessions.push(
-        createSession("Sprint", raceData.Sprint.date, raceData.Sprint.time, 60)
-      );
-    if (raceData.Qualifying)
-      sessions.push(
-        createSession(
-          "Qualifying",
-          raceData.Qualifying.date,
-          raceData.Qualifying.time,
-          60
-        )
-      );
-
-    // Race (usually 2 hours window)
-    sessions.push(createSession("Race", raceData.date, raceData.time, 120));
-
-    // Sort by time
-    sessions.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
-
-    return {
-      circuit: raceData.Circuit.circuitName,
-      location: raceData.Circuit.Location.locality,
-      country: raceData.Circuit.Location.country,
-      raceDate: `${raceData.date}T${raceData.time}`,
-      meetingKey: raceData.round, // Using round number as key
-      sessions: sessions,
-      weather: weatherData,
-    };
-  } catch (error) {
-    console.error("Error fetching next race:", error.message);
-    throw error;
-  }
-};
 
 /**
  * Get list of all drivers (for dropdowns/lists)
@@ -723,6 +648,9 @@ exports.getConstructorWins = async () => {
     // Fetch results for each completed race
     for (const session of completedRaces) {
       try {
+        // Add delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Get race results
         const resultsRes = await axios.get(
           `${OPENF1_URL}/session_result?session_key=${session.session_key}`
