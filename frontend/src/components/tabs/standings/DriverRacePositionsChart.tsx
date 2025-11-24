@@ -1,5 +1,15 @@
+import { useState } from "react";
 import ReactECharts from "echarts-for-react";
-import { Paper, Typography, useTheme } from "@mui/material";
+import {
+  Paper,
+  Typography,
+  useTheme,
+  FormControl,
+  Select,
+  MenuItem,
+  Box,
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
 
 interface DriverPosition {
   driverName: string;
@@ -18,15 +28,20 @@ const DriverRacePositionsChart = ({
   drivers,
 }: DriverRacePositionsChartProps) => {
   const theme = useTheme();
+  const [driverLimit, setDriverLimit] = useState<number>(10);
 
-  // Filter to show only top 10 drivers in championship (those with most non-null positions)
+  const handleLimitChange = (event: SelectChangeEvent<number>) => {
+    setDriverLimit(event.target.value as number);
+  };
+
+  // Filter to show selected number of drivers (those with most non-null positions)
   const topDrivers = [...drivers]
     .map((d) => ({
       ...d,
       validRaces: d.positions.filter((p) => p !== null).length,
     }))
     .sort((a, b) => b.validRaces - a.validRaces)
-    .slice(0, 10);
+    .slice(0, driverLimit === -1 ? drivers.length : driverLimit);
 
   const chartOption = {
     title: {
@@ -134,13 +149,39 @@ const DriverRacePositionsChart = ({
         borderRadius: 0,
       }}
     >
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ mb: 2, textAlign: "center" }}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 2,
+          mb: 2,
+          flexWrap: "wrap",
+        }}
       >
-        Showing top 10 drivers by race participation
-      </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Showing {driverLimit === -1 ? "all" : `top ${driverLimit}`} drivers by
+          race participation
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <Select
+            value={driverLimit}
+            onChange={handleLimitChange}
+            sx={{
+              color: "text.secondary",
+              ".MuiOutlinedInput-notchedOutline": {
+                borderColor: "divider",
+              },
+            }}
+          >
+            <MenuItem value={5}>5 Drivers</MenuItem>
+            <MenuItem value={10}>10 Drivers</MenuItem>
+            <MenuItem value={15}>15 Drivers</MenuItem>
+            <MenuItem value={20}>20 Drivers</MenuItem>
+            <MenuItem value={-1}>All Drivers</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
       <ReactECharts
         option={chartOption}
         style={{ height: "600px", width: "100%" }}

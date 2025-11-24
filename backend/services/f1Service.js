@@ -447,59 +447,112 @@ exports.getDriverList = async () => {
 /**
  * Get Driver Statistics (DNFs and Average Grid Position)
  * Aggregates data from all races in the current season
+ * Uses OpenF1 API for complete and accurate race data
  */
 exports.getDriverStats = async () => {
   try {
     const currentYear = new Date().getFullYear();
+    const now = new Date();
 
-    //  Fetch all race results for the season
-    const response = await axios.get(
-      `${JOLPICA_URL}/${currentYear}/results.json?limit=1000`
+    // Fetch all race sessions from OpenF1
+    const sessionsRes = await axios.get(
+      `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
     );
 
-    const races = response.data?.MRData?.RaceTable?.Races || [];
+    const sessions = sessionsRes.data || [];
 
-    if (races.length === 0) {
+    // Filter for completed races only
+    const completedRaces = sessions.filter((s) => new Date(s.date_start) < now);
+
+    if (completedRaces.length === 0) {
       return { season: currentYear, stats: [] };
     }
 
     // Aggregate stats per driver
     const driverStats = {};
 
-    races.forEach((race) => {
-      race.Results.forEach((result) => {
-        const driverCode = result.Driver.code;
-        const driverName = `${result.Driver.givenName} ${result.Driver.familyName}`;
-        const teamName = result.Constructor.name;
+    // Fetch results for each completed race
+    for (const session of completedRaces) {
+      try {
+        // Add small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-        if (!driverStats[driverCode]) {
-          driverStats[driverCode] = {
-            driver: driverName,
-            driverAcronym: driverCode,
-            driverNumber: parseInt(result.Driver.permanentNumber),
-            team: teamName,
-            teamColor: getTeamColor(teamName),
-            dnfCount: 0,
-            totalRaces: 0,
-            gridPositions: [],
+        // Get race results and position data
+        const [resultsRes, driversRes, positionRes] = await Promise.all([
+          axios.get(
+            `${OPENF1_URL}/session_result?session_key=${session.session_key}`
+          ),
+          axios.get(`${OPENF1_URL}/drivers?session_key=${session.session_key}`),
+          axios.get(
+            `${OPENF1_URL}/position?session_key=${session.session_key}`
+          ),
+        ]);
+
+        const results = resultsRes.data;
+        const drivers = driversRes.data;
+
+        if (!results || results.length === 0) continue;
+
+        // Create driver map for team info
+        const driverMap = {};
+        drivers.forEach((d) => {
+          driverMap[d.driver_number] = {
+            fullName: d.full_name,
+            acronym: d.name_acronym,
+            team: d.team_name,
+            teamColor: d.team_colour,
           };
-        }
+        });
 
-        driverStats[driverCode].totalRaces++;
+        // Process each result
+        results.forEach((result) => {
+          const driverInfo = driverMap[result.driver_number];
+          if (!driverInfo) return;
 
-        // Count DNFs (status is not "Finished" and contains various failure reasons)
-        const status = result.status || "";
-        if (status !== "Finished" && !status.includes("+")) {
-          driverStats[driverCode].dnfCount++;
-        }
+          const driverKey = driverInfo.acronym;
 
-        // Track grid positions for averaging
-        const gridPos = parseInt(result.grid);
-        if (!isNaN(gridPos) && gridPos > 0) {
-          driverStats[driverCode].gridPositions.push(gridPos);
-        }
-      });
-    });
+          if (!driverStats[driverKey]) {
+            driverStats[driverKey] = {
+              driver: driverInfo.fullName,
+              driverAcronym: driverInfo.acronym,
+              driverNumber: result.driver_number,
+              team: driverInfo.team,
+              teamColor: driverInfo.teamColor,
+              dnfCount: 0,
+              totalRaces: 0,
+              gridPositions: [],
+            };
+          }
+
+          driverStats[driverKey].totalRaces++;
+
+          // Count DNFs (using OpenF1's dnf, dns, dsq flags)
+          if (result.dnf || result.dns || result.dsq) {
+            driverStats[driverKey].dnfCount++;
+          }
+
+          // Track grid positions for averaging
+          // Get starting position from position data
+          const startPositions = positionRes.data?.filter(
+            (p) =>
+              p.driver_number === result.driver_number && p.position !== null
+          );
+          if (startPositions && startPositions.length > 0) {
+            // Get the first position (grid position)
+            const gridPos = startPositions[0].position;
+            if (gridPos && gridPos > 0) {
+              driverStats[driverKey].gridPositions.push(gridPos);
+            }
+          }
+        });
+      } catch (raceError) {
+        console.warn(
+          `Error fetching results for session ${session.session_key}:`,
+          raceError.message
+        );
+        continue;
+      }
+    }
 
     // Calculate average grid position for each driver
     const stats = Object.values(driverStats).map((driver) => ({
@@ -637,88 +690,6 @@ exports.getDriverList = async () => {
       }));
   } catch (error) {
     return [];
-  }
-};
-/**
- * Get Driver Statistics (DNFs and Average Grid Position)
- * Aggregates data from all races in the current season
- */
-exports.getDriverStats = async () => {
-  try {
-    const currentYear = new Date().getFullYear();
-
-    //  Fetch all race results for the season
-    const response = await axios.get(
-      `${JOLPICA_URL}/${currentYear}/results.json?limit=1000`
-    );
-
-    const races = response.data?.MRData?.RaceTable?.Races || [];
-
-    if (races.length === 0) {
-      return { season: currentYear, stats: [] };
-    }
-
-    // Aggregate stats per driver
-    const driverStats = {};
-
-    races.forEach((race) => {
-      race.Results.forEach((result) => {
-        const driverCode = result.Driver.code;
-        const driverName = `${result.Driver.givenName} ${result.Driver.familyName}`;
-        const teamName = result.Constructor.name;
-
-        if (!driverStats[driverCode]) {
-          driverStats[driverCode] = {
-            driver: driverName,
-            driverAcronym: driverCode,
-            driverNumber: parseInt(result.Driver.permanentNumber),
-            team: teamName,
-            teamColor: getTeamColor(teamName),
-            dnfCount: 0,
-            totalRaces: 0,
-            gridPositions: [],
-          };
-        }
-
-        driverStats[driverCode].totalRaces++;
-
-        // Count DNFs (status is not "Finished" and contains various failure reasons)
-        const status = result.status || "";
-        if (status !== "Finished" && !status.includes("+")) {
-          driverStats[driverCode].dnfCount++;
-        }
-
-        // Track grid positions for averaging
-        const gridPos = parseInt(result.grid);
-        if (!isNaN(gridPos) && gridPos > 0) {
-          driverStats[driverCode].gridPositions.push(gridPos);
-        }
-      });
-    });
-
-    // Calculate average grid position for each driver
-    const stats = Object.values(driverStats).map((driver) => ({
-      driver: driver.driver,
-      driverAcronym: driver.driverAcronym,
-      driverNumber: driver.driverNumber,
-      team: driver.team,
-      teamColor: driver.teamColor,
-      dnfCount: driver.dnfCount,
-      totalRaces: driver.totalRaces,
-      averageGridPosition:
-        driver.gridPositions.length > 0
-          ? driver.gridPositions.reduce((a, b) => a + b, 0) /
-            driver.gridPositions.length
-          : null,
-    }));
-
-    // Sort by driver acronym for consistency
-    stats.sort((a, b) => a.driverAcronym.localeCompare(b.driverAcronym));
-
-    return { season: currentYear, stats };
-  } catch (error) {
-    console.error("Error fetching driver stats:", error.message);
-    throw error;
   }
 };
 
