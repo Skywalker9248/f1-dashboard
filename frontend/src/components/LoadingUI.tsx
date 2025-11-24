@@ -3,8 +3,12 @@ import styled, { keyframes } from "styled-components";
 import RadioButtonCheckedIcon from "@mui/icons-material/RadioButtonChecked";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
+import { useTheme } from "@mui/material/styles";
+import { useColorMode } from "../context/ThemeContext";
 
 export default function LoadingUI() {
+  const theme = useTheme();
+  const { mode } = useColorMode();
   const [loadingText, setLoadingText] = useState("We are checking...");
   const [subText, setSubText] = useState("Standby");
   const [progress, setProgress] = useState(0);
@@ -45,15 +49,15 @@ export default function LoadingUI() {
   }, []);
 
   return (
-    <Wrapper>
-      <BackgroundGrid />
+    <Wrapper $theme={theme} $mode={mode}>
+      <BackgroundGrid $mode={mode} />
       <TopLine />
 
       <Content>
         <StatusWrapper>
           <PrimaryMessage>{loadingText}</PrimaryMessage>
 
-          <RadioIndicator>
+          <RadioIndicator theme={theme}>
             <PingingIcon>
               <RadioButtonCheckedIcon fontSize="small" />
             </PingingIcon>
@@ -65,12 +69,12 @@ export default function LoadingUI() {
 
         {/* Loader */}
         <LoaderWrapper>
-          <LoaderLabel>
+          <LoaderLabel theme={theme}>
             <span>Telemetry</span>
             <span>{progress}%</span>
           </LoaderLabel>
 
-          <LoaderBar>
+          <LoaderBar theme={theme}>
             <LoaderFill style={{ width: `${progress}%` }} />
           </LoaderBar>
 
@@ -100,10 +104,10 @@ export default function LoadingUI() {
 
 /* -------------------- Styled Components -------------------- */
 
-const Wrapper = styled.div`
+const Wrapper = styled.div<{ $theme: any; $mode: string }>`
   min-height: 100vh;
-  background: #0d0d0d;
-  color: white;
+  background: ${(props) => (props.$mode === "dark" ? "#0d0d0d" : "#f8f8f8")};
+  color: ${(props) => (props.$mode === "dark" ? "white" : "#1a1a1a")};
   font-family: monospace;
   display: flex;
   justify-content: center;
@@ -113,12 +117,15 @@ const Wrapper = styled.div`
   overflow: hidden;
 `;
 
-const BackgroundGrid = styled.div`
+const BackgroundGrid = styled.div<{ $mode: string }>`
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.1;
-  background-image: radial-gradient(#444 1px, transparent 1px);
+  opacity: ${(props) => (props.$mode === "dark" ? "0.1" : "0.05")};
+  background-image: radial-gradient(
+    ${(props) => (props.$mode === "dark" ? "#444" : "#999")} 1px,
+    transparent 1px
+  );
   background-size: 20px 20px;
 `;
 
@@ -170,9 +177,12 @@ const ping = keyframes`
   100% { transform: scale(2); opacity: 0; }
 `;
 
-const RadioIndicator = styled.div`
+const RadioIndicator = styled.div<{ theme?: any }>`
   position: relative;
-  background: rgba(0, 0, 0, 0.4);
+  background: ${(props) =>
+    props.theme?.palette?.mode === "dark"
+      ? "rgba(0, 0, 0, 0.4)"
+      : "rgba(255, 255, 255, 0.6)"};
   border: 1px solid rgba(127, 29, 29, 0.5);
   padding: 6px 16px;
   border-radius: 999px;
@@ -200,18 +210,22 @@ const LoaderWrapper = styled.div`
   width: 100%;
 `;
 
-const LoaderLabel = styled.div`
-  color: #737373;
+const LoaderLabel = styled.div<{ theme?: any }>`
+  color: ${(props) =>
+    props.theme?.palette?.mode === "dark" ? "#737373" : "#525252"};
   font-size: 11px;
   display: flex;
   justify-content: space-between;
   text-transform: uppercase;
 `;
 
-const LoaderBar = styled.div`
+const LoaderBar = styled.div<{ theme?: any }>`
   height: 8px;
-  background: #1f1f1f;
-  border: 1px solid #3a3a3a;
+  background: ${(props) =>
+    props.theme?.palette?.mode === "dark" ? "#1f1f1f" : "#e5e5e5"};
+  border: 1px solid
+    ${(props) =>
+      props.theme?.palette?.mode === "dark" ? "#3a3a3a" : "#d4d4d4"};
   border-radius: 4px;
   overflow: hidden;
   margin-top: 4px;
