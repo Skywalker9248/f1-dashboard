@@ -10,13 +10,7 @@ import {
   Box,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
-
-interface DriverPosition {
-  driverName: string;
-  driverAcronym: string;
-  teamColor: string;
-  positions: (number | null)[];
-}
+import type { DriverPosition } from "../../../types/f1";
 
 interface DriverRacePositionsChartProps {
   races: string[];

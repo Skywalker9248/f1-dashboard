@@ -1,9 +1,52 @@
+# ===========================
 # Dependencies
+# ===========================
 node_modules/
-/.pnp
+.pnp
 .pnp.js
 
+# ===========================
+# Environment Variables
+# ===========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env
+backend/.env
+
+# ===========================
+# Build Outputs
+# ===========================
+build/
+dist/
+dist-ssr/
+frontend/dist/
+frontend/dist-ssr/
+
+# ===========================
+# TypeScript
+# ===========================
+*.tsbuildinfo
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ===========================
 # Testing
+# ===========================
+coverage/
+__tests__/
+.nyc_output/
 *.test.js
 *.spec.js
 *.test.jsx
@@ -12,41 +55,25 @@ node_modules/
 *.spec.ts
 *.test.tsx
 *.spec.tsx
-coverage/
-__tests__/
-.nyc_output/
+backend/tests/
+backend/test/
 
-# Production
-build/
-dist/
-
-# Misc
-.DS_Store
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Editor directories and files
+# ===========================
+# Editor / IDE
+# ===========================
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 *.swp
 *.swo
 *~
 
+# ===========================
 # OS
+# ===========================
+.DS_Store
 Thumbs.db
-
-# Backend test files
-backend/**/*.test.js
-backend/**/*.spec.js
-backend/tests/
-backend/test/
-frontend/.env

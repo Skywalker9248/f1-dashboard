@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
-import API from "../../axios";
 import {
   Typography,
   Grid,
@@ -17,6 +16,8 @@ import {
   useTheme,
 } from "@mui/material";
 import LoadingUI from "../LoadingUI";
+import useDataFetch from "../../hooks/useDataFetch";
+import { CHART_HEIGHT } from "../../constants";
 
 interface SessionInfo {
   circuit: string;
@@ -50,126 +51,113 @@ interface LastRaceData {
   standings: Standing[];
 }
 
-const LastRace = () => {
-  const [data, setData] = useState<LastRaceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Pure functions — no dependency on props/state, safe at module level
+function formatLapTime(seconds: number | null): string {
+  if (!seconds) return "N/A";
+  const mins = Math.floor(seconds / 60);
+  const secs = (seconds % 60).toFixed(3);
+  return `${mins}:${secs.padStart(6, "0")}`;
+}
 
-  useEffect(() => {
-    API.get("/api/f1/last-race")
-      .then((response) => {
-        setData(response.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-        setLoading(false);
-      });
-  }, []);
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+const LastRace = () => {
+  const { data, loading, error } = useDataFetch<LastRaceData>("/api/f1/last-race");
+  const theme = useTheme();
+
+  // All hooks must run before any early return
+  const sortedStandings = useMemo(() => {
+    if (!data) return [];
+    return [...data.standings].sort((a, b) => {
+      const aDidNotFinish = a.dnf || a.dns || a.dsq;
+      const bDidNotFinish = b.dnf || b.dns || b.dsq;
+      if (!aDidNotFinish && bDidNotFinish) return -1;
+      if (aDidNotFinish && !bDidNotFinish) return 1;
+      if (a.position === null && b.position === null) return 0;
+      if (a.position === null) return 1;
+      if (b.position === null) return -1;
+      return a.position - b.position;
+    });
+  }, [data]);
+
+  const driversWithLaps = useMemo(
+    () =>
+      [...sortedStandings]
+        .filter((d) => d.fastestLapTime)
+        .sort((a, b) => (a.fastestLapTime || 999) - (b.fastestLapTime || 999)),
+    [sortedStandings]
+  );
+
+  const chartOption = useMemo(
+    () => ({
+      title: {
+        text: "Fastest Lap Times",
+        left: "center",
+        textStyle: { color: theme.palette.text.primary },
+      },
+      tooltip: {
+        trigger: "axis",
+        axisPointer: { type: "shadow" },
+        backgroundColor: theme.palette.background.paper,
+        textStyle: { color: theme.palette.text.primary },
+        formatter: (params: { dataIndex: number }[]) => {
+          const driver = driversWithLaps[params[0].dataIndex];
+          return `${driver.driver}<br/>Fastest Lap: ${formatLapTime(
+            driver.fastestLapTime
+          )}<br/>Team: ${driver.team}`;
+        },
+      },
+      xAxis: {
+        type: "category",
+        data: driversWithLaps.map((d) => d.driverAcronym),
+        axisLabel: {
+          rotate: 45,
+          interval: 0,
+          color: theme.palette.text.secondary,
+        },
+      },
+      yAxis: {
+        type: "value",
+        name: "Lap Time (seconds)",
+        nameTextStyle: { color: theme.palette.text.secondary },
+        axisLabel: {
+          color: theme.palette.text.secondary,
+          formatter: (value: number) => formatLapTime(value),
+        },
+      },
+      series: [
+        {
+          name: "Fastest Lap",
+          type: "bar",
+          data: driversWithLaps.map((d) => ({
+            value: d.fastestLapTime,
+            itemStyle: { color: `#${d.teamColor || "1976d2"}` },
+          })),
+          label: {
+            show: true,
+            position: "top",
+            color: theme.palette.text.primary,
+            formatter: (params: { value: number }) =>
+              formatLapTime(params.value),
+          },
+        },
+      ],
+    }),
+    [driversWithLaps, theme.palette]
+  );
 
   if (loading) return <LoadingUI />;
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!data) return <Alert severity="warning">No data available</Alert>;
 
-  const { sessionInfo, standings } = data;
-
-  // Sort standings: finished drivers first (by position), then DNF/DNS/DSQ at the bottom
-  const sortedStandings = [...standings].sort((a, b) => {
-    const aDidNotFinish = a.dnf || a.dns || a.dsq;
-    const bDidNotFinish = b.dnf || b.dns || b.dsq;
-
-    // If one finished and one didn't, finished comes first
-    if (!aDidNotFinish && bDidNotFinish) return -1;
-    if (aDidNotFinish && !bDidNotFinish) return 1;
-
-    // Both finished or both didn't finish, sort by position
-    // Handle null positions
-    if (a.position === null && b.position === null) return 0;
-    if (a.position === null) return 1;
-    if (b.position === null) return -1;
-    return a.position - b.position;
-  });
-
-  const theme = useTheme();
-
-  // Format lap time from seconds to MM:SS.mmm
-  const formatLapTime = (seconds: number | null) => {
-    if (!seconds) return "N/A";
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toFixed(3);
-    return `${mins}:${secs.padStart(6, "0")}`;
-  };
-
-  // Filter drivers with valid lap times and sort by fastest lap
-  const driversWithLaps = sortedStandings.filter((d) => d.fastestLapTime);
-  driversWithLaps.sort(
-    (a, b) => (a.fastestLapTime || 999) - (b.fastestLapTime || 999)
-  );
-
-  const chartOption = {
-    title: {
-      text: "Fastest Lap Times",
-      left: "center",
-      textStyle: { color: theme.palette.text.primary },
-    },
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow" },
-      backgroundColor: theme.palette.background.paper,
-      textStyle: { color: theme.palette.text.primary },
-      formatter: (params: any) => {
-        const dataIndex = params[0].dataIndex;
-        const driver = driversWithLaps[dataIndex];
-        return `${driver.driver}<br/>Fastest Lap: ${formatLapTime(
-          driver.fastestLapTime
-        )}<br/>Team: ${driver.team}`;
-      },
-    },
-    xAxis: {
-      type: "category",
-      data: driversWithLaps.map((d) => d.driverAcronym),
-      axisLabel: {
-        rotate: 45,
-        interval: 0,
-        color: theme.palette.text.secondary,
-      },
-    },
-    yAxis: {
-      type: "value",
-      name: "Lap Time (seconds)",
-      nameTextStyle: { color: theme.palette.text.secondary },
-      axisLabel: {
-        color: theme.palette.text.secondary,
-        formatter: (value: number) => formatLapTime(value),
-      },
-    },
-    series: [
-      {
-        name: "Fastest Lap",
-        type: "bar",
-        data: driversWithLaps.map((d) => ({
-          value: d.fastestLapTime,
-          itemStyle: { color: `#${d.teamColor || "1976d2"}` },
-        })),
-        label: {
-          show: true,
-          position: "top",
-          color: theme.palette.text.primary,
-          formatter: (params: any) => formatLapTime(params.value),
-        },
-      },
-    ],
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  const { sessionInfo } = data;
 
   return (
     <Box sx={{ py: 2 }}>
@@ -231,9 +219,9 @@ const LastRace = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sortedStandings.map((row, index) => (
+                  {sortedStandings.map((row) => (
                     <TableRow
-                      key={index}
+                      key={row.driverNumber}
                       sx={{ "&:hover": { backgroundColor: "action.hover" } }}
                     >
                       <TableCell>
@@ -310,7 +298,7 @@ const LastRace = () => {
           mt: 4,
         }}
       >
-        <Paper sx={{ height: 600, p: 2, borderRadius: 0 }}>
+        <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
           <ReactECharts
             option={chartOption}
             style={{ height: "100%", width: "100%" }}

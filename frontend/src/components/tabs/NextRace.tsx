@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Typography,
   Paper,
@@ -16,11 +15,11 @@ import CloudIcon from "@mui/icons-material/Cloud";
 import GrainIcon from "@mui/icons-material/Grain";
 import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
-import API from "../../axios"; // Ensure this path matches your project
 import ScheduleWidget from "../widgets/ScheduleWidget";
 import WeatherWidget from "../widgets/WeatherWidget";
-import { calculateCountdown } from "../../../helpers/utils";
+import { calculateCountdown } from "../../utils/utils";
 import LoadingUI from "../LoadingUI";
+import useDataFetch from "../../hooks/useDataFetch";
 
 // --- Types ---
 // These interfaces match the ones in the widgets.
@@ -74,22 +73,7 @@ const getWeatherDetails = (code: number) => {
 };
 
 const NextRace = () => {
-  const [data, setData] = useState<NextRaceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    API.get("/api/f1/next-race")
-      .then((response) => {
-        setData(response.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Failed to load race data");
-        setLoading(false);
-      });
-  }, []);
+  const { data, loading, error } = useDataFetch<NextRaceData>("/api/f1/next-race");
 
   if (loading) return <LoadingUI />;
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -105,6 +89,14 @@ const NextRace = () => {
           <Typography>See you in {data.nextSeason}!</Typography>
         )}
       </Box>
+    );
+  }
+
+  if (!data.circuit) {
+    return (
+      <Alert severity="warning" sx={{ m: 2 }}>
+        Race details unavailable. Please try again later.
+      </Alert>
     );
   }
 

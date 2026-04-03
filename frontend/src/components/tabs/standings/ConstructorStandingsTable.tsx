@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Paper,
   Typography,
@@ -9,19 +10,13 @@ import {
   TableRow,
   Box,
 } from "@mui/material";
-
-interface ConstructorStanding {
-  position: number;
-  team: string;
-  teamColor: string;
-  points: number;
-}
+import type { ConstructorStanding } from "../../../types/f1";
 
 interface ConstructorStandingsTableProps {
   standings: ConstructorStanding[];
 }
 
-const ConstructorStandingsTable = ({
+const ConstructorStandingsTable = memo(({
   standings,
 }: ConstructorStandingsTableProps) => {
   return (
@@ -76,6 +71,8 @@ const ConstructorStandingsTable = ({
       </TableContainer>
     </Paper>
   );
-};
+});
+
+ConstructorStandingsTable.displayName = "ConstructorStandingsTable";
 
 export default ConstructorStandingsTable;

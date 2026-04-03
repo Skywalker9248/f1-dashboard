@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 import { Alert, Box, Grid } from "@mui/material";
 import API from "../../axios";
 import LoadingUI from "../LoadingUI";
@@ -8,103 +8,119 @@ import DriverDNFChart from "./standings/DriverDNFChart";
 import DriverGridPositionChart from "./standings/DriverGridPositionChart";
 import ConstructorWinsChart from "./standings/ConstructorWinsChart";
 import DriverRacePositionsChart from "./standings/DriverRacePositionsChart";
+import type {
+  DriverStanding,
+  ConstructorStanding,
+  DriverStat,
+  ConstructorWin,
+  RacePositions,
+} from "../../types/f1";
 
-interface DriverStanding {
-  position: number;
-  driver: string;
-  driverAcronym: string;
-  driverNumber: number;
-  team: string;
-  teamColor: string;
-  points: number;
-  headshotUrl?: string;
+interface StandingsState {
+  driverStandings: DriverStanding[];
+  constructorStandings: ConstructorStanding[];
+  driverStats: DriverStat[];
+  constructorWins: ConstructorWin[];
+  racePositions: RacePositions;
+  loading: boolean;
+  error: string | null;
 }
 
-interface ConstructorStanding {
-  position: number;
-  team: string;
-  teamColor: string;
-  points: number;
-}
+type StandingsAction =
+  | { type: "FETCH_START" }
+  | {
+      type: "FETCH_SUCCESS";
+      payload: {
+        driverStandings: DriverStanding[];
+        constructorStandings: ConstructorStanding[];
+        driverStats: DriverStat[];
+        constructorWins: ConstructorWin[];
+        racePositions: RacePositions;
+      };
+    }
+  | { type: "FETCH_ERROR"; payload: string };
 
-interface DriverStat {
-  driver: string;
-  driverAcronym: string;
-  team: string;
-  teamColor: string;
-  dnfCount: number;
-  totalRaces: number;
-  averageGridPosition: number | null;
-}
+const initialState: StandingsState = {
+  driverStandings: [],
+  constructorStandings: [],
+  driverStats: [],
+  constructorWins: [],
+  racePositions: { races: [], drivers: [] },
+  loading: true,
+  error: null,
+};
 
-interface ConstructorWin {
-  team: string;
-  teamColor: string;
-  wins: number;
-}
-
-interface DriverPosition {
-  driverName: string;
-  driverAcronym: string;
-  teamColor: string;
-  positions: (number | null)[];
+function reducer(
+  state: StandingsState,
+  action: StandingsAction
+): StandingsState {
+  switch (action.type) {
+    case "FETCH_START":
+      return { ...state, loading: true, error: null };
+    case "FETCH_SUCCESS":
+      return { ...state, ...action.payload, loading: false };
+    case "FETCH_ERROR":
+      return { ...state, error: action.payload, loading: false };
+    default:
+      return state;
+  }
 }
 
 const OverallStandings = () => {
-  const [driverStandings, setDriverStandings] = useState<DriverStanding[]>([]);
-  const [constructorStandings, setConstructorStandings] = useState<
-    ConstructorStanding[]
-  >([]);
-  const [driverStats, setDriverStats] = useState<DriverStat[]>([]);
-  const [constructorWins, setConstructorWins] = useState<ConstructorWin[]>([]);
-  const [racePositions, setRacePositions] = useState<{
-    races: string[];
-    drivers: DriverPosition[];
-  }>({ races: [], drivers: [] });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const {
+    driverStandings,
+    constructorStandings,
+    driverStats,
+    constructorWins,
+    racePositions,
+    loading,
+    error,
+  } = state;
 
   useEffect(() => {
-    Promise.all([
-      API.get("/api/f1/standings/drivers"),
-      API.get("/api/f1/standings/constructors"),
-      API.get("/api/f1/driver-stats"),
-      API.get("/api/f1/constructor-wins"),
-      API.get("/api/f1/driver-race-positions"),
-    ])
-      .then(
-        ([
+    const fetchAll = async () => {
+      dispatch({ type: "FETCH_START" });
+
+      try {
+        const [
           driversResponse,
           constructorsResponse,
           statsResponse,
           winsResponse,
           positionsResponse,
-        ]) => {
-          // Handle new response format with season info
-          const drivers =
-            driversResponse.data.standings || driversResponse.data;
-          const constructors =
-            constructorsResponse.data.standings || constructorsResponse.data;
-          const stats = statsResponse.data.stats || statsResponse.data;
-          const wins = winsResponse.data.wins || winsResponse.data;
-          const positions = {
-            races: positionsResponse.data.races || [],
-            drivers: positionsResponse.data.drivers || [],
-          };
+        ] = await Promise.all([
+          API.get("/api/f1/standings/drivers"),
+          API.get("/api/f1/standings/constructors"),
+          API.get("/api/f1/driver-stats"),
+          API.get("/api/f1/constructor-wins"),
+          API.get("/api/f1/driver-race-positions"),
+        ]);
 
-          setDriverStandings(drivers);
-          setConstructorStandings(constructors);
-          setDriverStats(stats);
-          setConstructorWins(wins);
-          setRacePositions(positions);
-          setLoading(false);
-        }
-      )
-      .catch((err) => {
-        console.error(err);
-        setError(err.message);
-        setLoading(false);
-      });
+        dispatch({
+          type: "FETCH_SUCCESS",
+          payload: {
+            driverStandings:
+              driversResponse.data.standings || driversResponse.data,
+            constructorStandings:
+              constructorsResponse.data.standings || constructorsResponse.data,
+            driverStats: statsResponse.data.stats || statsResponse.data,
+            constructorWins: winsResponse.data.wins || winsResponse.data,
+            racePositions: {
+              races: positionsResponse.data.races || [],
+              drivers: positionsResponse.data.drivers || [],
+            },
+          },
+        });
+      } catch (err) {
+        dispatch({
+          type: "FETCH_ERROR",
+          payload: err instanceof Error ? err.message : "An error occurred",
+        });
+      }
+    };
+
+    fetchAll();
   }, []);
 
   if (loading) return <LoadingUI />;

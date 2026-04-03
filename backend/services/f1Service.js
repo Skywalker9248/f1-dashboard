@@ -1,8 +1,13 @@
 const axios = require("axios");
-
-// --- CONFIGURATION ---
-const OPENF1_URL = "https://api.openf1.org/v1";
-const JOLPICA_URL = "https://api.jolpi.ca/ergast/f1";
+const {
+  OPENF1_URL,
+  JOLPICA_URL,
+  OPEN_METEO_URL,
+  MIN_REQUEST_DELAY,
+  TTL,
+  POINTS_MAP,
+  SESSION_DURATION,
+} = require("../constants");
 
 // --- HELPER: Team Colors (Jolpica doesn't provide these, so we map them) ---
 const TEAM_COLORS = {
@@ -30,7 +35,6 @@ function getTeamColor(teamName) {
 const requestCache = new Map();
 const requestQueue = [];
 let isProcessingQueue = false;
-const MIN_REQUEST_DELAY = 300; // ms
 
 /**
  * Process the request queue one by one with delay
@@ -58,27 +62,46 @@ async function processQueue() {
 }
 
 /**
- * Fetch with in-memory caching and global rate limiting
+ * Determine cache TTL based on the URL being fetched.
+ * @param {string} url
+ * @returns {number} TTL in milliseconds
+ */
+function getTTL(url) {
+  if (url.includes('/position')) return TTL.LIVE;
+  if (url.includes('/session_result') || url.includes('/laps') || url.includes('/drivers')) return TTL.RACE;
+  if (url.includes('/driverStandings') || url.includes('/constructorStandings')) return TTL.STANDINGS;
+  if (url.includes('/sessions')) return TTL.STANDINGS;
+  return TTL.RACE;
+}
+
+/**
+ * Fetch with in-memory caching (with TTL), global rate limiting, and timeout.
  * @param {string} url
  * @param {object} config
  * @returns {Promise<any>}
  */
 async function fetchWithCache(url, config = {}) {
   const key = url + JSON.stringify(config);
+  const configWithTimeout = { timeout: 10_000, ...config };
 
-  if (requestCache.has(key)) {
-    return requestCache.get(key);
+  const cached = requestCache.get(key);
+  if (cached) {
+    if (Date.now() - cached.cachedAt < getTTL(url)) {
+      return cached.promise;
+    }
+    // TTL expired — evict and re-fetch
+    requestCache.delete(key);
   }
 
   const promise = new Promise((resolve, reject) => {
-    requestQueue.push({ url, config, resolve, reject });
+    requestQueue.push({ url, config: configWithTimeout, resolve, reject });
     processQueue();
   }).catch((err) => {
-    requestCache.delete(key); // Remove from cache on error
+    requestCache.delete(key);
     throw err;
   });
 
-  requestCache.set(key, promise);
+  requestCache.set(key, { promise, cachedAt: Date.now() });
   return promise;
 }
 
@@ -87,6 +110,8 @@ async function fetchWithCache(url, config = {}) {
 /**
  * Get Driver Standings
  * Fetches pre-calculated points from Jolpica (Instant & Accurate)
+ * @returns {Promise<{ season: number, standings: object[] }>}
+ * @throws {Error} When the Jolpica API request fails
  */
 exports.getDriverStandings = async () => {
   try {
@@ -120,12 +145,14 @@ exports.getDriverStandings = async () => {
     return { season: parseInt(table.season), standings };
   } catch (error) {
     console.error("Error fetching driver standings:", error.message);
-    return { season: new Date().getFullYear(), standings: [] };
+    throw error;
   }
 };
 
 /**
- * Get Constructor Standings
+ * Get Constructor Championship Standings
+ * @returns {Promise<{ season: number, standings: object[] }>}
+ * @throws {Error} When the Jolpica API request fails
  */
 exports.getConstructorStandings = async () => {
   try {
@@ -167,14 +194,16 @@ async function getLatestRaceSession() {
   try {
     // 1. Try current year
     let res = await axios.get(
-      `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`
+      `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear}`,
+      { timeout: 10_000 }
     );
     let sessions = res.data;
 
     // 2. Fallback to previous year if early in season
     if (!sessions || sessions.length === 0) {
       res = await axios.get(
-        `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear - 1}`
+        `${OPENF1_URL}/sessions?session_name=Race&year=${currentYear - 1}`,
+        { timeout: 10_000 }
       );
       sessions = res.data;
     }
@@ -199,7 +228,9 @@ async function getLatestRaceSession() {
 }
 
 /**
- * Get results of the last race with full driver details
+ * Get results of the last completed race with full driver details
+ * @returns {Promise<{ sessionInfo: object, standings: object[] }>}
+ * @throws {Error} When no completed race session is found or OpenF1 request fails
  */
 exports.getLastRaceResults = async () => {
   try {
@@ -258,18 +289,6 @@ exports.getLastRaceResults = async () => {
     // 3. Build Standings Array
     // OpenF1 points in session_result are sometimes unreliable immediately,
     // but position is accurate. We rely on position.
-    const POINTS_MAP = {
-      1: 25,
-      2: 18,
-      3: 15,
-      4: 12,
-      5: 10,
-      6: 8,
-      7: 6,
-      8: 4,
-      9: 2,
-      10: 1,
-    };
 
     const standings = results
       .sort((a, b) => a.position - b.position)
@@ -322,13 +341,16 @@ exports.getLastRaceResults = async () => {
 };
 
 /**
- * Get next upcoming race details
+ * Get details for the next upcoming race including schedule and weather forecast
+ * @returns {Promise<{ circuit: string, sessions: object[], weather: object|null }|{ message: string, nextSeason: number }>}
+ * @throws {Error} When the Jolpica schedule request fails
  */
 exports.getNextRace = async () => {
   try {
     // 1. Get Next Race Schedule from Jolpica (Ergast replacement)
     const scheduleRes = await axios.get(
-      "http://api.jolpi.ca/ergast/f1/current/next.json"
+      `${JOLPICA_URL}/current/next.json`,
+      { timeout: 10_000 }
     );
     const raceData = scheduleRes.data.MRData.RaceTable.Races[0];
 
@@ -349,8 +371,9 @@ exports.getNextRace = async () => {
     let weatherData = null;
     try {
       const weatherRes = await axios.get(
-        "https://api.open-meteo.com/v1/forecast",
+        OPEN_METEO_URL,
         {
+          timeout: 10_000,
           params: {
             latitude: lat,
             longitude: long,
@@ -404,7 +427,7 @@ exports.getNextRace = async () => {
           "Practice 1",
           raceData.FirstPractice.date,
           raceData.FirstPractice.time,
-          60
+          SESSION_DURATION.PRACTICE
         )
       );
     if (raceData.SecondPractice)
@@ -413,7 +436,7 @@ exports.getNextRace = async () => {
           "Practice 2",
           raceData.SecondPractice.date,
           raceData.SecondPractice.time,
-          60
+          SESSION_DURATION.PRACTICE
         )
       );
     if (raceData.ThirdPractice)
@@ -422,7 +445,7 @@ exports.getNextRace = async () => {
           "Practice 3",
           raceData.ThirdPractice.date,
           raceData.ThirdPractice.time,
-          60
+          SESSION_DURATION.PRACTICE
         )
       );
     if (raceData.SprintQualifying)
@@ -431,12 +454,17 @@ exports.getNextRace = async () => {
           "Sprint Qualifying",
           raceData.SprintQualifying.date,
           raceData.SprintQualifying.time,
-          45
+          SESSION_DURATION.SPRINT_QUALIFYING
         )
       );
     if (raceData.Sprint)
       sessions.push(
-        createSession("Sprint", raceData.Sprint.date, raceData.Sprint.time, 60)
+        createSession(
+          "Sprint",
+          raceData.Sprint.date,
+          raceData.Sprint.time,
+          SESSION_DURATION.SPRINT
+        )
       );
     if (raceData.Qualifying)
       sessions.push(
@@ -444,12 +472,12 @@ exports.getNextRace = async () => {
           "Qualifying",
           raceData.Qualifying.date,
           raceData.Qualifying.time,
-          60
+          SESSION_DURATION.QUALIFYING
         )
       );
 
     // Race (usually 2 hours window)
-    sessions.push(createSession("Race", raceData.date, raceData.time, 120));
+    sessions.push(createSession("Race", raceData.date, raceData.time, SESSION_DURATION.RACE));
 
     // Sort by time
     sessions.sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart));
@@ -470,7 +498,8 @@ exports.getNextRace = async () => {
 };
 
 /**
- * Get list of all drivers (for dropdowns/lists)
+ * Get list of all drivers from the most recent race session
+ * @returns {Promise<object[]>} Array of driver objects; returns empty array on error
  */
 exports.getDriverList = async () => {
   try {
@@ -501,9 +530,11 @@ exports.getDriverList = async () => {
   }
 };
 /**
- * Get Driver Statistics (DNFs and Average Grid Position)
- * Aggregates data from all races in the current season
- * Uses OpenF1 API for complete and accurate race data
+ * Get driver statistics aggregated across the current season
+ * Includes DNF count and average starting grid position per driver
+ * Fetches all completed race sessions in parallel via Promise.allSettled
+ * @returns {Promise<{ season: number, stats: object[] }>}
+ * @throws {Error} When the initial sessions fetch fails
  */
 exports.getDriverStats = async () => {
   try {
@@ -524,14 +555,12 @@ exports.getDriverStats = async () => {
       return { season: currentYear, stats: [] };
     }
 
-    // Aggregate stats per driver
+    // Aggregate stats per driver — fetch all races in parallel
     const driverStats = {};
 
-    // Fetch results for each completed race
-    for (const session of completedRaces) {
-      try {
-        // Get race results and position data
-        const [resultsRes, driversRes, positionRes] = await Promise.all([
+    const settledRaces = await Promise.allSettled(
+      completedRaces.map((session) =>
+        Promise.all([
           fetchWithCache(
             `${OPENF1_URL}/session_result?session_key=${session.session_key}`
           ),
@@ -541,73 +570,76 @@ exports.getDriverStats = async () => {
           fetchWithCache(
             `${OPENF1_URL}/position?session_key=${session.session_key}`
           ),
-        ]);
+        ])
+      )
+    );
 
-        const results = resultsRes.data;
-        const drivers = driversRes.data;
-
-        if (!results || results.length === 0) continue;
-
-        // Create driver map for team info
-        const driverMap = {};
-        drivers.forEach((d) => {
-          driverMap[d.driver_number] = {
-            fullName: d.full_name,
-            acronym: d.name_acronym,
-            team: d.team_name,
-            teamColor: d.team_colour,
-          };
-        });
-
-        // Process each result
-        results.forEach((result) => {
-          const driverInfo = driverMap[result.driver_number];
-          if (!driverInfo) return;
-
-          const driverKey = driverInfo.acronym;
-
-          if (!driverStats[driverKey]) {
-            driverStats[driverKey] = {
-              driver: driverInfo.fullName,
-              driverAcronym: driverInfo.acronym,
-              driverNumber: result.driver_number,
-              team: driverInfo.team,
-              teamColor: driverInfo.teamColor,
-              dnfCount: 0,
-              totalRaces: 0,
-              gridPositions: [],
-            };
-          }
-
-          driverStats[driverKey].totalRaces++;
-
-          // Count DNFs (using OpenF1's dnf, dns, dsq flags)
-          if (result.dnf || result.dns || result.dsq) {
-            driverStats[driverKey].dnfCount++;
-          }
-
-          // Track grid positions for averaging
-          // Get starting position from position data
-          const startPositions = positionRes.data?.filter(
-            (p) =>
-              p.driver_number === result.driver_number && p.position !== null
-          );
-          if (startPositions && startPositions.length > 0) {
-            // Get the first position (grid position)
-            const gridPos = startPositions[0].position;
-            if (gridPos && gridPos > 0) {
-              driverStats[driverKey].gridPositions.push(gridPos);
-            }
-          }
-        });
-      } catch (raceError) {
+    settledRaces.forEach((settled, i) => {
+      if (settled.status === "rejected") {
         console.warn(
-          `Error fetching results for session ${session.session_key}:`,
-          raceError.message
+          `Error fetching results for session ${completedRaces[i].session_key}:`,
+          settled.reason?.message
         );
-        continue;
+        return;
       }
-    }
+
+      const [resultsRes, driversRes, positionRes] = settled.value;
+      const results = resultsRes.data;
+      const drivers = driversRes.data;
+
+      if (!results || results.length === 0) return;
+
+      // Create driver map for team info
+      const driverMap = {};
+      drivers.forEach((d) => {
+        driverMap[d.driver_number] = {
+          fullName: d.full_name,
+          acronym: d.name_acronym,
+          team: d.team_name,
+          teamColor: d.team_colour,
+        };
+      });
+
+      // Process each result
+      results.forEach((result) => {
+        const driverInfo = driverMap[result.driver_number];
+        if (!driverInfo) return;
+
+        const driverKey = driverInfo.acronym;
+
+        if (!driverStats[driverKey]) {
+          driverStats[driverKey] = {
+            driver: driverInfo.fullName,
+            driverAcronym: driverInfo.acronym,
+            driverNumber: result.driver_number,
+            team: driverInfo.team,
+            teamColor: driverInfo.teamColor,
+            dnfCount: 0,
+            totalRaces: 0,
+            gridPositions: [],
+          };
+        }
+
+        driverStats[driverKey].totalRaces++;
+
+        // Count DNFs (using OpenF1's dnf, dns, dsq flags)
+        if (result.dnf || result.dns || result.dsq) {
+          driverStats[driverKey].dnfCount++;
+        }
+
+        // Track grid positions for averaging
+        const startPositions = positionRes.data?.filter(
+          (p) =>
+            p.driver_number === result.driver_number && p.position !== null
+        );
+        if (startPositions && startPositions.length > 0) {
+          const gridPos = startPositions[0].position;
+          if (gridPos && gridPos > 0) {
+            driverStats[driverKey].gridPositions.push(gridPos);
+          }
+        }
+      });
+    });
 
     // Calculate average grid position for each driver
     const stats = Object.values(driverStats).map((driver) => ({
@@ -636,47 +668,10 @@ exports.getDriverStats = async () => {
 };
 
 /**
- * Get Constructor Wins
- * Counts race wins for each constructor in the current season
- * Uses OpenF1 API for more complete and accurate race data
- */
-
-/**
- * Get list of all drivers (for dropdowns/lists)
- */
-exports.getDriverList = async () => {
-  try {
-    const session = await getLatestRaceSession();
-    if (!session) return [];
-
-    const res = await axios.get(
-      `${OPENF1_URL}/drivers?session_key=${session.session_key}`
-    );
-
-    // Dedup drivers
-    const seen = new Set();
-    return res.data
-      .filter((d) => {
-        if (seen.has(d.driver_number)) return false;
-        seen.add(d.driver_number);
-        return true;
-      })
-      .map((d) => ({
-        number: d.driver_number,
-        name: d.full_name,
-        acronym: d.name_acronym,
-        team: d.team_name,
-        headshotUrl: d.headshot_url,
-      }));
-  } catch (error) {
-    return [];
-  }
-};
-
-/**
- * Get Constructor Wins
- * Counts race wins for each constructor in the current season
- * Uses OpenF1 API for more complete and accurate race data
+ * Get constructor win counts for the current season
+ * Fetches all race results and driver info in parallel per race to avoid N+1 queries
+ * @returns {Promise<{ season: number, wins: object[] }>}
+ * @throws {Error} When the initial sessions fetch fails
  */
 exports.getConstructorWins = async () => {
   try {
@@ -697,68 +692,79 @@ exports.getConstructorWins = async () => {
       return { season: currentYear, wins: [] };
     }
 
-    // Count wins per constructor
+    // Count wins per constructor — fetch results + drivers in parallel for all races
     const constructorWins = {};
 
-    // Fetch results for each completed race
-    for (const session of completedRaces) {
-      try {
-        // Get race results
-        const resultsRes = await fetchWithCache(
-          `${OPENF1_URL}/session_result?session_key=${session.session_key}`
-        );
-        const results = resultsRes.data;
+    const settledRaces = await Promise.allSettled(
+      completedRaces.map((session) =>
+        Promise.all([
+          fetchWithCache(
+            `${OPENF1_URL}/session_result?session_key=${session.session_key}`
+          ),
+          fetchWithCache(
+            `${OPENF1_URL}/drivers?session_key=${session.session_key}`
+          ),
+        ])
+      )
+    );
 
-        if (!results || results.length === 0) {
-          console.warn(
-            `[getConstructorWins] No results for session ${session.session_key} (${session.location})`
-          );
-          continue;
-        }
+    settledRaces.forEach((settled, i) => {
+      const session = completedRaces[i];
 
-        // Find the winner (position 1)
-        const winner = results.find((r) => r.position === 1);
-        if (!winner) {
-          console.warn(
-            `[getConstructorWins] No winner found for session ${session.session_key}`
-          );
-          continue;
-        }
-
-        // Get driver info to get team name
-        const driversRes = await fetchWithCache(
-          `${OPENF1_URL}/drivers?session_key=${session.session_key}&driver_number=${winner.driver_number}`
-        );
-        const driverInfo = driversRes.data[0];
-
-        if (!driverInfo) {
-          console.warn(
-            `[getConstructorWins] No driver info for winner ${winner.driver_number} in session ${session.session_key}`
-          );
-          continue;
-        }
-
-        const teamName = driverInfo.team_name;
-
-        // Initialize or increment win count
-        if (!constructorWins[teamName]) {
-          constructorWins[teamName] = {
-            team: teamName,
-            teamColor: getTeamColor(teamName),
-            wins: 0,
-          };
-        }
-
-        constructorWins[teamName].wins++;
-      } catch (raceError) {
+      if (settled.status === "rejected") {
         console.warn(
-          `[getConstructorWins] Error fetching results for session ${session.session_key}:`,
-          raceError.message
+          `[getConstructorWins] Error fetching session ${session.session_key}:`,
+          settled.reason?.message
         );
-        // Continue with next race even if one fails
-        continue;
+        return;
       }
-    }
+
+      const [resultsRes, driversRes] = settled.value;
+      const results = resultsRes.data;
+      const drivers = driversRes.data;
+
+      if (!results || results.length === 0) {
+        console.warn(
+          `[getConstructorWins] No results for session ${session.session_key} (${session.location})`
+        );
+        return;
+      }
+
+      // Find the winner (position 1)
+      const winner = results.find((r) => r.position === 1);
+      if (!winner) {
+        console.warn(
+          `[getConstructorWins] No winner found for session ${session.session_key}`
+        );
+        return;
+      }
+
+      // Look up team from pre-fetched driver list (eliminates the N+1 sequential fetch)
+      const driverMap = {};
+      drivers.forEach((d) => {
+        driverMap[d.driver_number] = d;
+      });
+
+      const winnerDriver = driverMap[winner.driver_number];
+      if (!winnerDriver) {
+        console.warn(
+          `[getConstructorWins] No driver info for winner ${winner.driver_number} in session ${session.session_key}`
+        );
+        return;
+      }
+
+      const teamName = winnerDriver.team_name;
+
+      if (!constructorWins[teamName]) {
+        constructorWins[teamName] = {
+          team: teamName,
+          teamColor: getTeamColor(teamName),
+          wins: 0,
+        };
+      }
+
+      constructorWins[teamName].wins++;
+    });
 
     const wins = Object.values(constructorWins);
 
@@ -773,9 +779,11 @@ exports.getConstructorWins = async () => {
 };
 
 /**
- * Get Driver Race Positions
- * Fetches finishing positions for all drivers across all races in the season
- * Used for visualizing driver performance trends
+ * Get per-driver finishing positions across all completed races in the current season
+ * Arrays are aligned by race index so chart rendering can directly zip races and positions.
+ * Races are fetched in parallel; results are processed in chronological order.
+ * @returns {Promise<{ season: number, races: string[], drivers: object[] }>}
+ * @throws {Error} When the initial sessions fetch fails
  */
 exports.getDriverRacePositions = async () => {
   try {
@@ -801,85 +809,87 @@ exports.getDriverRacePositions = async () => {
     const driverData = {};
     const raceNames = [];
 
-    // Fetch results for each completed race
-    for (const session of completedRaces) {
-      try {
-        // Get race results
-        const [resultsRes, driversRes] = await Promise.all([
+    // Fetch all races in parallel, then process in sorted date order to preserve alignment
+    const settledRaces = await Promise.allSettled(
+      completedRaces.map((session) =>
+        Promise.all([
           fetchWithCache(
             `${OPENF1_URL}/session_result?session_key=${session.session_key}`
           ),
           fetchWithCache(
             `${OPENF1_URL}/drivers?session_key=${session.session_key}`
           ),
-        ]);
+        ])
+      )
+    );
 
-        const results = resultsRes.data;
-        const drivers = driversRes.data;
+    // completedRaces is already sorted by date_start — process in that order
+    settledRaces.forEach((settled, i) => {
+      const session = completedRaces[i];
 
-        if (!results || results.length === 0) {
-          console.warn(
-            `No results for ${session.circuit_short_name}, skipping`
-          );
-          continue;
-        }
-
-        // Only add race name after successful fetch
-        raceNames.push(session.circuit_short_name);
-
-        // Create driver map for team colors
-        const driverMap = {};
-        drivers.forEach((d) => {
-          driverMap[d.driver_number] = {
-            fullName: d.full_name,
-            acronym: d.name_acronym,
-            teamColor: d.team_colour,
-          };
-        });
-
-        // Pre-initialize all drivers for this race to maintain array alignment
-        drivers.forEach((d) => {
-          const driverKey = d.name_acronym;
-          if (!driverData[driverKey]) {
-            driverData[driverKey] = {
-              driverName: d.full_name,
-              driverAcronym: d.name_acronym,
-              teamColor: d.team_colour,
-              positions: new Array(raceNames.length - 1).fill(null), // Fill previous races with null
-            };
-          }
-        });
-
-        // Mark all drivers as absent (null) for this race first
-        Object.keys(driverData).forEach((key) => {
-          // Add null for this race if driver's array is shorter
-          while (driverData[key].positions.length < raceNames.length) {
-            driverData[key].positions.push(null);
-          }
-        });
-
-        // Process each result and update actual positions
-        results.forEach((result) => {
-          const driverInfo = driverMap[result.driver_number];
-          if (!driverInfo) return;
-
-          const driverKey = driverInfo.acronym;
-
-          // Update position for this race (last position in array)
-          const position =
-            result.dnf || result.dns || result.dsq ? null : result.position;
-
-          driverData[driverKey].positions[raceNames.length - 1] = position;
-        });
-      } catch (raceError) {
+      if (settled.status === "rejected") {
         console.warn(
           `Error fetching results for session ${session.session_key} (${session.circuit_short_name}):`,
-          raceError.message
+          settled.reason?.message
         );
-        // Skip this race entirely - don't add to raceNames or positions
-        continue;
+        // Skip this race — don't add to raceNames or positions
+        return;
       }
-    }
+
+      const [resultsRes, driversRes] = settled.value;
+      const results = resultsRes.data;
+      const drivers = driversRes.data;
+
+      if (!results || results.length === 0) {
+        console.warn(`No results for ${session.circuit_short_name}, skipping`);
+        return;
+      }
+
+      // Only add race name after confirming results exist
+      raceNames.push(session.circuit_short_name);
+
+      // Create driver map for team colors
+      const driverMap = {};
+      drivers.forEach((d) => {
+        driverMap[d.driver_number] = {
+          fullName: d.full_name,
+          acronym: d.name_acronym,
+          teamColor: d.team_colour,
+        };
+      });
+
+      // Pre-initialize new drivers with nulls for all previous races
+      drivers.forEach((d) => {
+        const driverKey = d.name_acronym;
+        if (!driverData[driverKey]) {
+          driverData[driverKey] = {
+            driverName: d.full_name,
+            driverAcronym: d.name_acronym,
+            teamColor: d.team_colour,
+            positions: new Array(raceNames.length - 1).fill(null),
+          };
+        }
+      });
+
+      // Pad existing drivers who weren't in this race with null
+      Object.keys(driverData).forEach((key) => {
+        while (driverData[key].positions.length < raceNames.length) {
+          driverData[key].positions.push(null);
+        }
+      });
+
+      // Update actual finishing positions
+      results.forEach((result) => {
+        const driverInfo = driverMap[result.driver_number];
+        if (!driverInfo) return;
+
+        const driverKey = driverInfo.acronym;
+        const position =
+          result.dnf || result.dns || result.dsq ? null : result.position;
+
+        driverData[driverKey].positions[raceNames.length - 1] = position;
+      });
+    });
 
     const drivers = Object.values(driverData);
 

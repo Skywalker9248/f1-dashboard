@@ -1,3 +1,4 @@
+import type { FC } from "react";
 import {
   Typography,
   Paper,
@@ -24,7 +25,7 @@ interface ScheduleWidgetProps {
   sessions: Session[];
 }
 
-const ScheduleWidget: React.FC<ScheduleWidgetProps> = ({ sessions }) => {
+const ScheduleWidget: FC<ScheduleWidgetProps> = ({ sessions }) => {
   const theme = useTheme();
 
   const formatDateTime = (dateString: string) => {
@@ -69,7 +70,7 @@ const ScheduleWidget: React.FC<ScheduleWidgetProps> = ({ sessions }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sessions.map((session, index) => {
+            {sessions.map((session) => {
               const { date, time } = formatDateTime(session.dateStart);
               const duration = Math.round(
                 (new Date(session.dateEnd).getTime() -
@@ -80,7 +81,7 @@ const ScheduleWidget: React.FC<ScheduleWidgetProps> = ({ sessions }) => {
 
               return (
                 <TableRow
-                  key={index}
+                  key={session.sessionName}
                   sx={{
                     bgcolor: isRace
                       ? theme.palette.mode === "dark"

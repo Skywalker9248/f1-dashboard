@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   Paper,
   Typography,
@@ -13,26 +13,20 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-
-interface DriverStanding {
-  position: number;
-  driver: string;
-  driverAcronym: string;
-  driverNumber: number;
-  team: string;
-  teamColor: string;
-  points: number;
-  headshotUrl?: string;
-}
+import { TOP_STANDINGS_COUNT } from "../../../constants";
+import type { DriverStanding } from "../../../types/f1";
 
 interface DriverStandingsTableProps {
   standings: DriverStanding[];
 }
 
-const DriverStandingsTable = ({ standings }: DriverStandingsTableProps) => {
+const DriverStandingsTable = memo(({ standings }: DriverStandingsTableProps) => {
   const [showAllDrivers, setShowAllDrivers] = useState(false);
 
-  const displayedDrivers = showAllDrivers ? standings : standings.slice(0, 10);
+  const displayedDrivers = useMemo(
+    () => (showAllDrivers ? standings : standings.slice(0, TOP_STANDINGS_COUNT)),
+    [standings, showAllDrivers]
+  );
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -60,7 +54,7 @@ const DriverStandingsTable = ({ standings }: DriverStandingsTableProps) => {
           <TableBody>
             {displayedDrivers.map((row) => (
               <TableRow
-                key={row.position}
+                key={row.driverNumber}
                 sx={{ "&:hover": { backgroundColor: "action.hover" } }}
               >
                 <TableCell>
@@ -95,7 +89,7 @@ const DriverStandingsTable = ({ standings }: DriverStandingsTableProps) => {
           </TableBody>
         </Table>
       </TableContainer>
-      {standings.length > 10 && (
+      {standings.length > TOP_STANDINGS_COUNT && (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
           <Button
             onClick={() => setShowAllDrivers(!showAllDrivers)}
@@ -111,6 +105,8 @@ const DriverStandingsTable = ({ standings }: DriverStandingsTableProps) => {
       )}
     </Paper>
   );
-};
+});
+
+DriverStandingsTable.displayName = "DriverStandingsTable";
 
 export default DriverStandingsTable;

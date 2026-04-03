@@ -1,9 +1,21 @@
 import axios from 'axios';
 
-// This automatically picks the right URL:
-// Localhost when you run on your PC, Render URL when on Vercel
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+  timeout: 15_000,
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      return Promise.reject(new Error('Request timed out. Please try again.'));
+    }
+    if (!error.response) {
+      return Promise.reject(new Error('Network error. Check your connection.'));
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default API;

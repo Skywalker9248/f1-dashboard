@@ -1,71 +1,71 @@
+import { memo, useMemo } from "react";
 import { Paper, Box, useTheme } from "@mui/material";
 import ReactECharts from "echarts-for-react";
-
-interface ConstructorWin {
-  team: string;
-  teamColor: string;
-  wins: number;
-}
+import { CHART_HEIGHT } from "../../../constants";
+import type { ConstructorWin } from "../../../types/f1";
 
 interface ConstructorWinsChartProps {
   wins: ConstructorWin[];
 }
 
-const ConstructorWinsChart = ({ wins }: ConstructorWinsChartProps) => {
+const ConstructorWinsChart = memo(({ wins }: ConstructorWinsChartProps) => {
   const theme = useTheme();
 
-  const chartOption = {
-    title: {
-      text: "Constructor Wins",
-      left: "center",
-      textStyle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: theme.palette.text.primary,
-      },
-    },
-    tooltip: {
-      trigger: "item",
-      backgroundColor: theme.palette.background.paper,
-      textStyle: { color: theme.palette.text.primary },
-      formatter: "{b}: {c} wins ({d}%)",
-    },
-    legend: {
-      bottom: "0",
-      left: "center",
-      textStyle: { color: theme.palette.text.secondary },
-    },
-    series: [
-      {
-        name: "Wins",
-        type: "pie",
-        radius: ["40%", "70%"],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 10,
-          borderColor: theme.palette.background.default,
-          borderWidth: 2,
-        },
-        label: {
-          show: true,
-          formatter: "{b}\n{c} wins",
+  const chartOption = useMemo(
+    () => ({
+      title: {
+        text: "Constructor Wins",
+        left: "center",
+        textStyle: {
+          fontSize: 18,
+          fontWeight: "bold",
           color: theme.palette.text.primary,
         },
-        emphasis: {
+      },
+      tooltip: {
+        trigger: "item",
+        backgroundColor: theme.palette.background.paper,
+        textStyle: { color: theme.palette.text.primary },
+        formatter: "{b}: {c} wins ({d}%)",
+      },
+      legend: {
+        bottom: "0",
+        left: "center",
+        textStyle: { color: theme.palette.text.secondary },
+      },
+      series: [
+        {
+          name: "Wins",
+          type: "pie",
+          radius: ["40%", "70%"],
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: theme.palette.background.default,
+            borderWidth: 2,
+          },
           label: {
             show: true,
-            fontSize: 16,
-            fontWeight: "bold",
+            formatter: "{b}\n{c} wins",
+            color: theme.palette.text.primary,
           },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 16,
+              fontWeight: "bold",
+            },
+          },
+          data: wins.map((w) => ({
+            value: w.wins,
+            name: w.team,
+            itemStyle: { color: `#${w.teamColor}` },
+          })),
         },
-        data: wins.map((w) => ({
-          value: w.wins,
-          name: w.team,
-          itemStyle: { color: `#${w.teamColor}` },
-        })),
-      },
-    ],
-  };
+      ],
+    }),
+    [wins, theme.palette]
+  );
 
   return (
     <Box
@@ -79,7 +79,7 @@ const ConstructorWinsChart = ({ wins }: ConstructorWinsChartProps) => {
         mb: 4,
       }}
     >
-      <Paper sx={{ height: 600, p: 2, borderRadius: 0 }}>
+      <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
         <ReactECharts
           option={chartOption}
           style={{ height: "100%", width: "100%" }}
@@ -87,6 +87,8 @@ const ConstructorWinsChart = ({ wins }: ConstructorWinsChartProps) => {
       </Paper>
     </Box>
   );
-};
+});
+
+ConstructorWinsChart.displayName = "ConstructorWinsChart";
 
 export default ConstructorWinsChart;
