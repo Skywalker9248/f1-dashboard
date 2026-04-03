@@ -14,8 +14,9 @@ A full-stack Formula 1 dashboard for visualizing live standings, race results, d
 | Routing | React Router v7 |
 | HTTP Client | Axios |
 | Styling | MUI theming + Styled Components |
-| Backend | Node.js, Express |
-| Data Source | Jolpica F1 API (via backend proxy) |
+| Backend | Hono on Cloudflare Workers |
+| Caching | Cloudflare Cache API (edge caching) |
+| Data Sources | OpenF1 API, Jolpica API, Open-Meteo |
 
 ---
 
@@ -23,7 +24,7 @@ A full-stack Formula 1 dashboard for visualizing live standings, race results, d
 
 ```
 f1-dashboard-project/
-├── frontend/          # Vite + React + TypeScript app
+├── frontend/          # Vite + React + TypeScript app (deployed on Vercel)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── tabs/          # LastRace, NextRace, OverallStandings tabs
@@ -41,12 +42,17 @@ f1-dashboard-project/
 │   │   └── constants.ts
 │   └── helpers/               # Frontend build helpers
 │
-└── backend/           # Express API proxy
-    ├── controllers/   # f1HomeController
-    ├── routes/        # f1Routes (/api/f1/*)
-    ├── services/      # Jolpica API service layer
+└── backend/           # Hono API (deployed on Cloudflare Workers)
+    ├── src/
+    │   ├── index.js            # Hono entry point
+    │   ├── routes/
+    │   │   └── f1Routes.js
+    │   ├── controllers/
+    │   │   └── f1HomeController.js
+    │   └── services/
+    │       └── f1Service.js
     ├── constants.js
-    └── server.js
+    └── wrangler.toml
 ```
 
 ---
@@ -70,13 +76,14 @@ All routes are prefixed with `/api/f1`:
 | Method | Route | Description |
 |--------|-------|-------------|
 | GET | `/last-race` | Last race results |
-| GET | `/next-race` | Next race details |
+| GET | `/next-race` | Next race details + weather forecast |
 | GET | `/standings/drivers` | Driver championship standings |
 | GET | `/standings/constructors` | Constructor championship standings |
 | GET | `/drivers` | Driver list for selector |
-| GET | `/driver-stats` | Per-driver statistics |
+| GET | `/driver-stats` | Per-driver statistics (DNFs, avg grid position) |
 | GET | `/driver-race-positions` | Driver positions across all races |
 | GET | `/constructor-wins` | Constructor wins data |
+| GET | `/home` | Alias for `/last-race` (legacy) |
 
 ---
 
@@ -86,6 +93,7 @@ All routes are prefixed with `/api/f1`:
 
 - Node.js ≥ 18
 - Yarn (recommended) or npm
+- A [Cloudflare account](https://dash.cloudflare.com) (free tier is fine)
 
 ### 1. Clone the repo
 
@@ -98,16 +106,15 @@ cd f1-dashboard-project
 
 ```bash
 cd backend
-cp .env.example .env   # set PORT (default: 5000)
 yarn install
-yarn dev               # starts with nodemon
+yarn start    # runs wrangler dev on http://localhost:8787
 ```
 
 ### 3. Setup & run the Frontend
 
 ```bash
 cd frontend
-cp .env.example .env   # set VITE_API_URL=http://localhost:5000
+cp .env.example .env   # set VITE_API_URL=http://localhost:8787
 yarn install
 yarn dev               # starts Vite dev server
 ```
@@ -118,14 +125,36 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## Environment Variables
 
-### `backend/.env`
-```env
-PORT=5000
-```
-
 ### `frontend/.env`
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:8787
+```
+
+No backend `.env` needed — Cloudflare Workers uses `wrangler.toml` for configuration.
+
+---
+
+## Deployment
+
+### Backend — Cloudflare Workers
+
+```bash
+cd backend
+
+# First time only: create the KV namespace and fill the IDs into wrangler.toml
+npx wrangler kv namespace create "F1_CACHE"
+npx wrangler kv namespace create "F1_CACHE" --preview
+
+# Deploy
+yarn deploy
+```
+
+### Frontend — Vercel
+
+Push to `main` — Vercel auto-deploys. Set the `VITE_API_URL` environment variable in your Vercel project settings to your deployed Workers URL:
+
+```
+VITE_API_URL=https://f1-dashboard-api.<your-subdomain>.workers.dev
 ```
 
 ---
@@ -144,8 +173,8 @@ VITE_API_URL=http://localhost:5000
 ### Backend (`backend/`)
 | Command | Description |
 |---------|-------------|
-| `yarn dev` | Start with nodemon (auto-reload) |
-| `yarn start` | Start with Node |
+| `yarn start` | Start Wrangler dev server |
+| `yarn deploy` | Deploy to Cloudflare Workers |
 | `yarn format` | Run Prettier on backend files |
 
 ---
