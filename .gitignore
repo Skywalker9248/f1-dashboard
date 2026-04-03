@@ -1,4 +1,10 @@
 # ===========================
+# Cloudflare / Wrangler
+# ===========================
+.wrangler/
+backend/.wrangler/
+
+# ===========================
 # Dependencies
 # ===========================
 node_modules/
