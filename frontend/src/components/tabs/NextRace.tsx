@@ -214,16 +214,14 @@ const NextRace = () => {
 
       <Grid container spacing={3}>
         {/* 2. SCHEDULE TABLE */}
-        <Grid size={{ xs: 12, md: data.weather ? 6 : 12 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           {data.sessions && <ScheduleWidget sessions={data.sessions} />}
         </Grid>
 
         {/* 3. WEATHER CARD */}
-        {data.weather && weatherInfo && (
-          <Grid size={{ xs: 12, md: 6 }}>
-            <WeatherWidget weather={data.weather} weatherInfo={weatherInfo} />
-          </Grid>
-        )}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <WeatherWidget weather={data.weather} weatherInfo={weatherInfo} />
+        </Grid>
       </Grid>
     </Box>
   );

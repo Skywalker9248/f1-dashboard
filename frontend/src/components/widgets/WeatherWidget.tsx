@@ -1,5 +1,6 @@
 import { type JSX } from "react";
 import { Typography, Paper, Box, Divider, useTheme } from "@mui/material";
+import CloudOffIcon from "@mui/icons-material/CloudOff";
 
 interface WeatherForecast {
   tempMax: number;
@@ -9,11 +10,11 @@ interface WeatherForecast {
 }
 
 interface WeatherWidgetProps {
-  weather: WeatherForecast;
-  weatherInfo: {
+  weather: WeatherForecast | null | undefined;
+  weatherInfo?: {
     label: string;
     icon: JSX.Element;
-  };
+  } | null;
 }
 
 const WeatherWidget: React.FC<WeatherWidgetProps> = ({
@@ -23,7 +24,7 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   const theme = useTheme();
 
   return (
-    <Paper sx={{ p: 0, height: "100%" }}>
+    <Paper sx={{ p: 0, height: "100%", display: "flex", flexDirection: "column" }}>
       <Box
         sx={{
           p: 2,
@@ -47,47 +48,65 @@ const WeatherWidget: React.FC<WeatherWidgetProps> = ({
           flexDirection: "column",
           alignItems: "center",
           gap: 2,
+          flexGrow: 1,
+          justifyContent: weather ? "flex-start" : "center",
+          minHeight: "200px"
         }}
       >
-        {/* Weather Icon */}
-        <Box sx={{ transform: "scale(1.5)", my: 1 }}>{weatherInfo.icon}</Box>
-        <Typography variant="h5" fontWeight="medium">
-          {weatherInfo.label}
-        </Typography>
+        {weather && weatherInfo ? (
+          <>
+            {/* Weather Icon */}
+            <Box sx={{ transform: "scale(1.5)", my: 1 }}>{weatherInfo.icon}</Box>
+            <Typography variant="h5" fontWeight="medium">
+              {weatherInfo.label}
+            </Typography>
 
-        <Divider flexItem />
+            <Divider flexItem />
 
-        {/* Stats */}
-        <Box
-          sx={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "space-between",
-            px: 1,
-          }}
-        >
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              High
+            {/* Stats */}
+            <Box
+              sx={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "space-between",
+                px: 1,
+              }}
+            >
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  High
+                </Typography>
+                <Typography variant="h6">{weather.tempMax}°C</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Low
+                </Typography>
+                <Typography variant="h6">{weather.tempMin}°C</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Rain
+                </Typography>
+                <Typography variant="h6">{weather.precipProb}%</Typography>
+              </Box>
+            </Box>
+          </>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", color: "text.secondary" }}>
+            <CloudOffIcon sx={{ fontSize: 48, mb: 1, opacity: 0.5 }} />
+            <Typography variant="body1">
+              Forecast unavailable yet
             </Typography>
-            <Typography variant="h6">{weather.tempMax}°C</Typography>
-          </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Low
+            <Typography variant="caption" sx={{ mt: 1, opacity: 0.7 }}>
+              Usually available 14 days before the race.
             </Typography>
-            <Typography variant="h6">{weather.tempMin}°C</Typography>
           </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Rain
-            </Typography>
-            <Typography variant="h6">{weather.precipProb}%</Typography>
-          </Box>
-        </Box>
+        )}
       </Box>
     </Paper>
   );
 };
 
 export default WeatherWidget;
+
