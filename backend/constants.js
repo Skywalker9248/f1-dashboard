@@ -37,7 +37,7 @@ const SESSION_DURATION = {
   RACE: 120,
 };
 
-module.exports = {
+export {
   OPENF1_URL,
   JOLPICA_URL,
   OPEN_METEO_URL,
