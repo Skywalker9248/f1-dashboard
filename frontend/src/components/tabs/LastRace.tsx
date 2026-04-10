@@ -16,6 +16,7 @@ import {
   useTheme,
 } from "@mui/material";
 import LoadingUI from "../LoadingUI";
+import ErrorWidget from "../ErrorWidget";
 import useDataFetch from "../../hooks/useDataFetch";
 import { CHART_HEIGHT } from "../../constants";
 
@@ -69,7 +70,7 @@ function formatDate(dateString: string): string {
 }
 
 const LastRace = () => {
-  const { data, loading, error } = useDataFetch<LastRaceData>("/api/f1/last-race");
+  const { data, loading, error, retry } = useDataFetch<LastRaceData>("/api/f1/last-race");
   const theme = useTheme();
 
   // All hooks must run before any early return
@@ -154,7 +155,7 @@ const LastRace = () => {
   );
 
   if (loading) return <LoadingUI />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <ErrorWidget message="Prancing horse lost the telemetry." onRetry={retry} />;
   if (!data) return <Alert severity="warning">No data available</Alert>;
 
   const { sessionInfo } = data;

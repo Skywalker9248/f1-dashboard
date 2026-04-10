@@ -1,7 +1,8 @@
-import { useEffect, useReducer } from "react";
-import { Alert, Box, Grid } from "@mui/material";
+import { useEffect, useReducer, useState } from "react";
+import { Box, Grid } from "@mui/material";
 import API from "../../axios";
 import LoadingUI from "../LoadingUI";
+import ErrorWidget from "../ErrorWidget";
 import DriverStandingsTable from "./standings/DriverStandingsTable";
 import ConstructorStandingsTable from "./standings/ConstructorStandingsTable";
 import DriverDNFChart from "./standings/DriverDNFChart";
@@ -68,6 +69,8 @@ function reducer(
 
 const OverallStandings = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [retryCount, setRetryCount] = useState(0);
+  const retry = () => setRetryCount(n => n + 1);
   const {
     driverStandings,
     constructorStandings,
@@ -121,10 +124,10 @@ const OverallStandings = () => {
     };
 
     fetchAll();
-  }, []);
+  }, [retryCount]);
 
   if (loading) return <LoadingUI />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <ErrorWidget message="Ferrari strategy applied to the API." onRetry={retry} />;
 
   return (
     <Box sx={{ py: 2 }}>
