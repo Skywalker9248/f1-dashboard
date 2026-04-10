@@ -19,6 +19,7 @@ import ScheduleWidget from "../widgets/ScheduleWidget";
 import WeatherWidget from "../widgets/WeatherWidget";
 import { calculateCountdown } from "../../utils/utils";
 import LoadingUI from "../LoadingUI";
+import ErrorWidget from "../ErrorWidget";
 import useDataFetch from "../../hooks/useDataFetch";
 
 // --- Types ---
@@ -73,10 +74,10 @@ const getWeatherDetails = (code: number) => {
 };
 
 const NextRace = () => {
-  const { data, loading, error } = useDataFetch<NextRaceData>("/api/f1/next-race");
+  const { data, loading, error, retry } = useDataFetch<NextRaceData>("/api/f1/next-race");
 
   if (loading) return <LoadingUI />;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  if (error) return <ErrorWidget message="Fred moved the pit wall again." onRetry={retry} />;
   if (!data) return <Alert severity="warning">No data available</Alert>;
 
   if (data.message) {
