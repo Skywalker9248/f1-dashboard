@@ -49,7 +49,7 @@ const WidgetWrapper = ({
 
   return (
     <Box sx={{ position: "relative" }}>
-      {onRefresh && (
+      {onRefresh && !error && (
         <IconButton
           size="small"
           onClick={onRefresh}

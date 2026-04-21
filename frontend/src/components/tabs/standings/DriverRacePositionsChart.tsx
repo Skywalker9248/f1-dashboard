@@ -161,6 +161,7 @@ const DriverRacePositionsChart = ({
         marginLeft: "-50vw",
         marginRight: "-50vw",
         mt: 4,
+        mb: 4,
       }}
     >
       <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={600}>
