@@ -3,12 +3,15 @@ import { Paper, Box, useTheme } from "@mui/material";
 import ReactECharts from "echarts-for-react";
 import { TOP_STANDINGS_COUNT, CHART_HEIGHT } from "../../../constants";
 import type { DriverStat } from "../../../types/f1";
+import WidgetWrapper from "../../WidgetWrapper";
 
 interface DriverDNFChartProps {
   stats: DriverStat[];
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
-const DriverDNFChart = memo(({ stats }: DriverDNFChartProps) => {
+const DriverDNFChart = memo(({ stats, loading, onRefresh }: DriverDNFChartProps) => {
   const theme = useTheme();
 
   const sortedStats = useMemo(
@@ -87,12 +90,14 @@ const DriverDNFChart = memo(({ stats }: DriverDNFChartProps) => {
         mb: 4,
       }}
     >
-      <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
-        <ReactECharts
-          option={chartOption}
-          style={{ height: "100%", width: "100%" }}
-        />
-      </Paper>
+      <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={CHART_HEIGHT}>
+        <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+          <ReactECharts
+            option={chartOption}
+            style={{ height: "100%", width: "100%" }}
+          />
+        </Paper>
+      </WidgetWrapper>
     </Box>
   );
 });

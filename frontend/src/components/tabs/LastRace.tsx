@@ -15,8 +15,7 @@ import {
   Chip,
   useTheme,
 } from "@mui/material";
-import LoadingUI from "../LoadingUI";
-import ErrorWidget from "../ErrorWidget";
+import WidgetWrapper from "../WidgetWrapper";
 import useDataFetch from "../../hooks/useDataFetch";
 import { CHART_HEIGHT } from "../../constants";
 
@@ -73,7 +72,7 @@ const LastRace = () => {
   const { data, loading, error, retry } = useDataFetch<LastRaceData>("/api/f1/last-race");
   const theme = useTheme();
 
-  // All hooks must run before any early return
+  // All hooks must run unconditionally before any conditional rendering
   const sortedStandings = useMemo(() => {
     if (!data) return [];
     return [...data.standings].sort((a, b) => {
@@ -154,37 +153,35 @@ const LastRace = () => {
     [driversWithLaps, theme.palette]
   );
 
-  if (loading) return <LoadingUI />;
-  if (error) return <ErrorWidget message="Prancing horse lost the telemetry." onRetry={retry} />;
-  if (!data) return <Alert severity="warning">No data available</Alert>;
-
-  const { sessionInfo } = data;
-
   return (
     <Box sx={{ py: 2 }}>
       {/* Session Information */}
-      <Paper sx={{ p: 3, mb: 4, backgroundColor: "background.default" }}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
-              {sessionInfo.sessionName}
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              {sessionInfo.circuit} - {sessionInfo.country}
-            </Typography>
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: "right" } }}>
-            <Typography variant="h6">{formatDate(sessionInfo.date)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {sessionInfo.location}
-            </Typography>
-          </Grid>
-        </Grid>
-      </Paper>
+      <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={130}>
+        {data && (
+          <Paper sx={{ p: 3, mb: 4, backgroundColor: "background.default" }}>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
+                  {data.sessionInfo.sessionName}
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  {data.sessionInfo.circuit} - {data.sessionInfo.country}
+                </Typography>
+              </Grid>
+              <Grid size={{ xs: 12, md: 6 }} sx={{ textAlign: { md: "right" } }}>
+                <Typography variant="h6">{formatDate(data.sessionInfo.date)}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {data.sessionInfo.location}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Paper>
+        )}
+      </WidgetWrapper>
 
       {/* Results Table */}
-      <Grid container spacing={4}>
-        <Grid size={{ xs: 12 }}>
+      <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={400}>
+        {data && (
           <Paper sx={{ p: 3, display: "flex", flexDirection: "column" }}>
             <Typography
               component="h2"
@@ -199,24 +196,12 @@ const LastRace = () => {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>
-                      <strong>Pos</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Driver</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Team</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Points</strong>
-                    </TableCell>
-                    <TableCell align="right">
-                      <strong>Gap</strong>
-                    </TableCell>
-                    <TableCell align="center">
-                      <strong>Status</strong>
-                    </TableCell>
+                    <TableCell><strong>Pos</strong></TableCell>
+                    <TableCell><strong>Driver</strong></TableCell>
+                    <TableCell><strong>Team</strong></TableCell>
+                    <TableCell align="right"><strong>Points</strong></TableCell>
+                    <TableCell align="right"><strong>Gap</strong></TableCell>
+                    <TableCell align="center"><strong>Status</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -226,9 +211,7 @@ const LastRace = () => {
                       sx={{ "&:hover": { backgroundColor: "action.hover" } }}
                     >
                       <TableCell>
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                           <Box
                             sx={{
                               width: 4,
@@ -242,10 +225,7 @@ const LastRace = () => {
                       </TableCell>
                       <TableCell>
                         <Box>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontWeight: "bold" }}
-                          >
+                          <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                             {row.driver}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -265,15 +245,9 @@ const LastRace = () => {
                           : `+${(row.gapToLeader || 0).toFixed(3)}s`}
                       </TableCell>
                       <TableCell align="center">
-                        {row.dnf && (
-                          <Chip label="DNF" size="small" color="error" />
-                        )}
-                        {row.dns && (
-                          <Chip label="DNS" size="small" color="warning" />
-                        )}
-                        {row.dsq && (
-                          <Chip label="DSQ" size="small" color="error" />
-                        )}
+                        {row.dnf && <Chip label="DNF" size="small" color="error" />}
+                        {row.dns && <Chip label="DNS" size="small" color="warning" />}
+                        {row.dsq && <Chip label="DSQ" size="small" color="error" />}
                         {!row.dnf && !row.dns && !row.dsq && (
                           <Chip label="Finished" size="small" color="success" />
                         )}
@@ -284,10 +258,13 @@ const LastRace = () => {
               </Table>
             </TableContainer>
           </Paper>
-        </Grid>
-      </Grid>
+        )}
+        {!loading && !error && !data && (
+          <Alert severity="warning">No race data available.</Alert>
+        )}
+      </WidgetWrapper>
 
-      {/* Chart - Full Width */}
+      {/* Fastest Lap Chart - Full Width */}
       <Box
         sx={{
           width: "100vw",
@@ -299,12 +276,16 @@ const LastRace = () => {
           mt: 4,
         }}
       >
-        <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
-          <ReactECharts
-            option={chartOption}
-            style={{ height: "100%", width: "100%" }}
-          />
-        </Paper>
+        <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={CHART_HEIGHT}>
+          {data && (
+            <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+              <ReactECharts
+                option={chartOption}
+                style={{ height: "100%", width: "100%" }}
+              />
+            </Paper>
+          )}
+        </WidgetWrapper>
       </Box>
     </Box>
   );

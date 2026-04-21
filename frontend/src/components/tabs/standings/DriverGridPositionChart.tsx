@@ -3,13 +3,16 @@ import { Paper, Box, useTheme } from "@mui/material";
 import ReactECharts from "echarts-for-react";
 import { TOP_STANDINGS_COUNT, CHART_HEIGHT } from "../../../constants";
 import type { DriverStat } from "../../../types/f1";
+import WidgetWrapper from "../../WidgetWrapper";
 
 interface DriverGridPositionChartProps {
   stats: DriverStat[];
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
 const DriverGridPositionChart = memo(
-  ({ stats }: DriverGridPositionChartProps) => {
+  ({ stats, loading, onRefresh }: DriverGridPositionChartProps) => {
     const theme = useTheme();
 
     const sortedStats = useMemo(
@@ -97,12 +100,14 @@ const DriverGridPositionChart = memo(
           mb: 4,
         }}
       >
-        <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
-          <ReactECharts
-            option={chartOption}
-            style={{ height: "100%", width: "100%" }}
-          />
-        </Paper>
+        <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={CHART_HEIGHT}>
+          <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+            <ReactECharts
+              option={chartOption}
+              style={{ height: "100%", width: "100%" }}
+            />
+          </Paper>
+        </WidgetWrapper>
       </Box>
     );
   }

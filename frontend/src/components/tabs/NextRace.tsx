@@ -17,14 +17,11 @@ import ThunderstormIcon from "@mui/icons-material/Thunderstorm";
 import WaterDropIcon from "@mui/icons-material/WaterDrop";
 import ScheduleWidget from "../widgets/ScheduleWidget";
 import WeatherWidget from "../widgets/WeatherWidget";
+import WidgetWrapper from "../WidgetWrapper";
 import { calculateCountdown } from "../../utils/utils";
-import LoadingUI from "../LoadingUI";
-import ErrorWidget from "../ErrorWidget";
 import useDataFetch from "../../hooks/useDataFetch";
 
 // --- Types ---
-// These interfaces match the ones in the widgets.
-// Ideally, these should be in a shared types file.
 interface Session {
   sessionName: string;
   sessionType: string;
@@ -53,12 +50,8 @@ interface NextRaceData {
 
 // --- Helper: Weather Icon Mapper ---
 const getWeatherDetails = (code: number) => {
-  // WMO Weather interpretation codes (http://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM)
   if (code === 0)
-    return {
-      label: "Clear Sky",
-      icon: <WbSunnyIcon sx={{ color: "#FFD700" }} />,
-    };
+    return { label: "Clear Sky", icon: <WbSunnyIcon sx={{ color: "#FFD700" }} /> };
   if (code >= 1 && code <= 3)
     return { label: "Cloudy", icon: <CloudIcon sx={{ color: "#90A4AE" }} /> };
   if (code >= 51 && code <= 67)
@@ -66,34 +59,28 @@ const getWeatherDetails = (code: number) => {
   if (code >= 71 && code <= 77)
     return { label: "Snow", icon: <GrainIcon sx={{ color: "#E0E0E0" }} /> };
   if (code >= 95)
-    return {
-      label: "Storm",
-      icon: <ThunderstormIcon sx={{ color: "#FFEB3B" }} />,
-    };
+    return { label: "Storm", icon: <ThunderstormIcon sx={{ color: "#FFEB3B" }} /> };
   return { label: "Overcast", icon: <CloudIcon /> };
 };
 
 const NextRace = () => {
   const { data, loading, error, retry } = useDataFetch<NextRaceData>("/api/f1/next-race");
 
-  if (loading) return <LoadingUI />;
-  if (error) return <ErrorWidget message="Fred moved the pit wall again." onRetry={retry} />;
-  if (!data) return <Alert severity="warning">No data available</Alert>;
+  // Compute derived values safely — hooks must run unconditionally
+  const countdown = data?.raceDate ? calculateCountdown(data.raceDate) : null;
+  const weatherInfo = data?.weather ? getWeatherDetails(data.weather.weatherCode) : null;
 
-  if (data.message) {
+  // Business-logic: off-season or no race — shown only after data loads
+  if (!loading && !error && data?.message) {
     return (
       <Box sx={{ textAlign: "center", p: 4 }}>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {data.message}
-        </Alert>
-        {data.nextSeason && (
-          <Typography>See you in {data.nextSeason}!</Typography>
-        )}
+        <Alert severity="info" sx={{ mb: 2 }}>{data.message}</Alert>
+        {data.nextSeason && <Typography>See you in {data.nextSeason}!</Typography>}
       </Box>
     );
   }
 
-  if (!data.circuit) {
+  if (!loading && !error && data && !data.circuit) {
     return (
       <Alert severity="warning" sx={{ m: 2 }}>
         Race details unavailable. Please try again later.
@@ -101,127 +88,98 @@ const NextRace = () => {
     );
   }
 
-  const countdown = data.raceDate ? calculateCountdown(data.raceDate) : null;
-  const weatherInfo = data.weather
-    ? getWeatherDetails(data.weather.weatherCode)
-    : null;
-
   return (
     <Box sx={{ py: 2 }}>
       {/* 1. HERO HEADER */}
-      <Paper
-        sx={{
-          p: 4,
-          mb: 3,
-          background: "linear-gradient(135deg, #cc0000 0%, #800000 100%)",
-          color: "white",
-          borderRadius: 2,
-        }}
-      >
-        <Grid container spacing={3} alignItems="center">
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                mb: 1,
-                opacity: 0.9,
-              }}
-            >
-              <FlagIcon fontSize="small" />
-              <Typography
-                variant="overline"
-                sx={{ fontWeight: "bold", letterSpacing: 1 }}
-              >
-                ROUND {data.meetingKey}
-              </Typography>
-            </Box>
-            <Typography
-              variant="h3"
-              sx={{ fontWeight: "800", mb: 2, textTransform: "uppercase" }}
-            >
-              {data.circuit}
-            </Typography>
-            <Box
-              sx={{ display: "flex", gap: 3, flexWrap: "wrap", opacity: 0.9 }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <LocationOnIcon fontSize="small" />
-                <Typography variant="subtitle1">
-                  {data.location}, {data.country}
-                </Typography>
-              </Box>
-              {data.raceDate && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <CalendarTodayIcon fontSize="small" />
-                  <Typography variant="subtitle1">
-                    {new Date(data.raceDate).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+      <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={200}>
+        {data?.circuit && (
+          <Paper
+            sx={{
+              p: 4,
+              mb: 3,
+              background: "linear-gradient(135deg, #cc0000 0%, #800000 100%)",
+              color: "white",
+              borderRadius: 2,
+            }}
+          >
+            <Grid container spacing={3} alignItems="center">
+              <Grid size={{ xs: 12, md: 8 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, opacity: 0.9 }}>
+                  <FlagIcon fontSize="small" />
+                  <Typography variant="overline" sx={{ fontWeight: "bold", letterSpacing: 1 }}>
+                    ROUND {data.meetingKey}
                   </Typography>
                 </Box>
-              )}
-            </Box>
-          </Grid>
+                <Typography variant="h3" sx={{ fontWeight: "800", mb: 2, textTransform: "uppercase" }}>
+                  {data.circuit}
+                </Typography>
+                <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", opacity: 0.9 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <LocationOnIcon fontSize="small" />
+                    <Typography variant="subtitle1">
+                      {data.location}, {data.country}
+                    </Typography>
+                  </Box>
+                  {data.raceDate && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                      <CalendarTodayIcon fontSize="small" />
+                      <Typography variant="subtitle1">
+                        {new Date(data.raceDate).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
 
-          {/* Countdown Card */}
-          {countdown && (
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Card
-                sx={{
-                  bgcolor: "rgba(0,0,0,0.3)",
-                  color: "white",
-                  backdropFilter: "blur(4px)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
-              >
-                <CardContent sx={{ textAlign: "center", py: 2 }}>
-                  <Typography
-                    variant="caption"
-                    sx={{ textTransform: "uppercase", opacity: 0.8 }}
-                  >
-                    Lights Out In
-                  </Typography>
-                  <Box
+              {/* Countdown Card */}
+              {countdown && (
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <Card
                     sx={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "baseline",
-                      gap: 1,
+                      bgcolor: "rgba(0,0,0,0.3)",
+                      color: "white",
+                      backdropFilter: "blur(4px)",
+                      border: "1px solid rgba(255,255,255,0.1)",
                     }}
                   >
-                    <Typography variant="h3" fontWeight="bold">
-                      {countdown.days}
-                    </Typography>
-                    <Typography variant="body2">days</Typography>
-                    <Typography variant="h3" fontWeight="bold">
-                      {countdown.hours}
-                    </Typography>
-                    <Typography variant="body2">hrs</Typography>
-                    <Typography variant="h3" fontWeight="bold">
-                      {countdown.minutes}
-                    </Typography>
-                    <Typography variant="body2">min</Typography>
-                  </Box>
-                </CardContent>
-              </Card>
+                    <CardContent sx={{ textAlign: "center", py: 2 }}>
+                      <Typography variant="caption" sx={{ textTransform: "uppercase", opacity: 0.8 }}>
+                        Lights Out In
+                      </Typography>
+                      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: 1 }}>
+                        <Typography variant="h3" fontWeight="bold">{countdown.days}</Typography>
+                        <Typography variant="body2">days</Typography>
+                        <Typography variant="h3" fontWeight="bold">{countdown.hours}</Typography>
+                        <Typography variant="body2">hrs</Typography>
+                        <Typography variant="h3" fontWeight="bold">{countdown.minutes}</Typography>
+                        <Typography variant="body2">min</Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
             </Grid>
-          )}
-        </Grid>
-      </Paper>
+          </Paper>
+        )}
+      </WidgetWrapper>
 
       <Grid container spacing={3}>
         {/* 2. SCHEDULE TABLE */}
         <Grid size={{ xs: 12, md: 6 }}>
-          {data.sessions && <ScheduleWidget sessions={data.sessions} />}
+          <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={300}>
+            {data?.sessions && <ScheduleWidget sessions={data.sessions} />}
+          </WidgetWrapper>
         </Grid>
 
         {/* 3. WEATHER CARD */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <WeatherWidget weather={data.weather} weatherInfo={weatherInfo} />
+          <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={300}>
+            <WeatherWidget weather={data?.weather} weatherInfo={weatherInfo} />
+          </WidgetWrapper>
         </Grid>
       </Grid>
     </Box>

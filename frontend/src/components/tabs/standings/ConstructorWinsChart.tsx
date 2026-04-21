@@ -3,12 +3,15 @@ import { Paper, Box, useTheme } from "@mui/material";
 import ReactECharts from "echarts-for-react";
 import { CHART_HEIGHT } from "../../../constants";
 import type { ConstructorWin } from "../../../types/f1";
+import WidgetWrapper from "../../WidgetWrapper";
 
 interface ConstructorWinsChartProps {
   wins: ConstructorWin[];
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
-const ConstructorWinsChart = memo(({ wins }: ConstructorWinsChartProps) => {
+const ConstructorWinsChart = memo(({ wins, loading, onRefresh }: ConstructorWinsChartProps) => {
   const theme = useTheme();
 
   const chartOption = useMemo(
@@ -79,12 +82,14 @@ const ConstructorWinsChart = memo(({ wins }: ConstructorWinsChartProps) => {
         mb: 4,
       }}
     >
-      <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
-        <ReactECharts
-          option={chartOption}
-          style={{ height: "100%", width: "100%" }}
-        />
-      </Paper>
+      <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={CHART_HEIGHT}>
+        <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+          <ReactECharts
+            option={chartOption}
+            style={{ height: "100%", width: "100%" }}
+          />
+        </Paper>
+      </WidgetWrapper>
     </Box>
   );
 });

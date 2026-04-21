@@ -11,15 +11,20 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import type { DriverPosition } from "../../../types/f1";
+import WidgetWrapper from "../../WidgetWrapper";
 
 interface DriverRacePositionsChartProps {
   races: string[];
   drivers: DriverPosition[];
+  loading?: boolean;
+  onRefresh?: () => void;
 }
 
 const DriverRacePositionsChart = ({
   races,
   drivers,
+  loading,
+  onRefresh,
 }: DriverRacePositionsChartProps) => {
   const theme = useTheme();
   const [driverLimit, setDriverLimit] = useState<number>(10);
@@ -147,7 +152,7 @@ const DriverRacePositionsChart = ({
   );
 
   return (
-    <Paper
+    <Box
       sx={{
         width: "100vw",
         position: "relative",
@@ -156,50 +161,52 @@ const DriverRacePositionsChart = ({
         marginLeft: "-50vw",
         marginRight: "-50vw",
         mt: 4,
-        p: 2,
-        borderRadius: 0,
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 2,
-          mb: 2,
-          flexWrap: "wrap",
-        }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          Showing {driverLimit === -1 ? "all" : `top ${driverLimit}`} drivers by
-          average position
-        </Typography>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <Select
-            value={driverLimit}
-            onChange={handleLimitChange}
+      <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={600}>
+        <Paper sx={{ p: 2, borderRadius: 0 }}>
+          <Box
             sx={{
-              color: "text.secondary",
-              ".MuiOutlinedInput-notchedOutline": {
-                borderColor: "divider",
-              },
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 2,
+              mb: 2,
+              flexWrap: "wrap",
             }}
           >
-            <MenuItem value={5}>5 Drivers</MenuItem>
-            <MenuItem value={10}>10 Drivers</MenuItem>
-            <MenuItem value={15}>15 Drivers</MenuItem>
-            <MenuItem value={20}>20 Drivers</MenuItem>
-            <MenuItem value={-1}>All Drivers</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-      <ReactECharts
-        option={chartOption}
-        notMerge={true}
-        lazyUpdate={true}
-        style={{ height: "600px", width: "100%" }}
-      />
-    </Paper>
+            <Typography variant="body2" color="text.secondary">
+              Showing {driverLimit === -1 ? "all" : `top ${driverLimit}`} drivers by
+              average position
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                value={driverLimit}
+                onChange={handleLimitChange}
+                sx={{
+                  color: "text.secondary",
+                  ".MuiOutlinedInput-notchedOutline": {
+                    borderColor: "divider",
+                  },
+                }}
+              >
+                <MenuItem value={5}>5 Drivers</MenuItem>
+                <MenuItem value={10}>10 Drivers</MenuItem>
+                <MenuItem value={15}>15 Drivers</MenuItem>
+                <MenuItem value={20}>20 Drivers</MenuItem>
+                <MenuItem value={-1}>All Drivers</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+          <ReactECharts
+            option={chartOption}
+            notMerge={true}
+            lazyUpdate={true}
+            style={{ height: "600px", width: "100%" }}
+          />
+        </Paper>
+      </WidgetWrapper>
+    </Box>
   );
 };
 
