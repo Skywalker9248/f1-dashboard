@@ -64,23 +64,25 @@ const getWeatherDetails = (code: number) => {
 };
 
 const NextRace = () => {
-  const { data, loading, error, retry } = useDataFetch<NextRaceData>("/api/f1/next-race");
+  const heroFetch = useDataFetch<NextRaceData>("/api/f1/next-race");
+  const scheduleFetch = useDataFetch<NextRaceData>("/api/f1/next-race");
+  const weatherFetch = useDataFetch<NextRaceData>("/api/f1/next-race");
 
   // Compute derived values safely — hooks must run unconditionally
-  const countdown = data?.raceDate ? calculateCountdown(data.raceDate) : null;
-  const weatherInfo = data?.weather ? getWeatherDetails(data.weather.weatherCode) : null;
+  const countdown = heroFetch.data?.raceDate ? calculateCountdown(heroFetch.data.raceDate) : null;
+  const weatherInfo = weatherFetch.data?.weather ? getWeatherDetails(weatherFetch.data.weather.weatherCode) : null;
 
   // Business-logic: off-season or no race — shown only after data loads
-  if (!loading && !error && data?.message) {
+  if (!heroFetch.loading && !heroFetch.error && heroFetch.data?.message) {
     return (
       <Box sx={{ textAlign: "center", p: 4 }}>
-        <Alert severity="info" sx={{ mb: 2 }}>{data.message}</Alert>
-        {data.nextSeason && <Typography>See you in {data.nextSeason}!</Typography>}
+        <Alert severity="info" sx={{ mb: 2 }}>{heroFetch.data.message}</Alert>
+        {heroFetch.data.nextSeason && <Typography>See you in {heroFetch.data.nextSeason}!</Typography>}
       </Box>
     );
   }
 
-  if (!loading && !error && data && !data.circuit) {
+  if (!heroFetch.loading && !heroFetch.error && heroFetch.data && !heroFetch.data.circuit) {
     return (
       <Alert severity="warning" sx={{ m: 2 }}>
         Race details unavailable. Please try again later.
@@ -91,12 +93,12 @@ const NextRace = () => {
   return (
     <Box sx={{ py: 2 }}>
       {/* 1. HERO HEADER */}
-      <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={200}>
-        {data?.circuit && (
+      <Box sx={{ mb: 3 }}>
+      <WidgetWrapper loading={heroFetch.loading} error={heroFetch.error} onRefresh={heroFetch.retry} minHeight={200}>
+        {heroFetch.data?.circuit && (
           <Paper
             sx={{
               p: 4,
-              mb: 3,
               background: "linear-gradient(135deg, #cc0000 0%, #800000 100%)",
               color: "white",
               borderRadius: 2,
@@ -107,24 +109,24 @@ const NextRace = () => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, opacity: 0.9 }}>
                   <FlagIcon fontSize="small" />
                   <Typography variant="overline" sx={{ fontWeight: "bold", letterSpacing: 1 }}>
-                    ROUND {data.meetingKey}
+                    ROUND {heroFetch.data.meetingKey}
                   </Typography>
                 </Box>
                 <Typography variant="h3" sx={{ fontWeight: "800", mb: 2, textTransform: "uppercase" }}>
-                  {data.circuit}
+                  {heroFetch.data.circuit}
                 </Typography>
                 <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", opacity: 0.9 }}>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                     <LocationOnIcon fontSize="small" />
                     <Typography variant="subtitle1">
-                      {data.location}, {data.country}
+                      {heroFetch.data.location}, {heroFetch.data.country}
                     </Typography>
                   </Box>
-                  {data.raceDate && (
+                  {heroFetch.data.raceDate && (
                     <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                       <CalendarTodayIcon fontSize="small" />
                       <Typography variant="subtitle1">
-                        {new Date(data.raceDate).toLocaleDateString("en-US", {
+                        {new Date(heroFetch.data.raceDate).toLocaleDateString("en-US", {
                           month: "long",
                           day: "numeric",
                           year: "numeric",
@@ -166,19 +168,20 @@ const NextRace = () => {
           </Paper>
         )}
       </WidgetWrapper>
+      </Box>
 
       <Grid container spacing={3}>
         {/* 2. SCHEDULE TABLE */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={300}>
-            {data?.sessions && <ScheduleWidget sessions={data.sessions} />}
+          <WidgetWrapper loading={scheduleFetch.loading} error={scheduleFetch.error} onRefresh={scheduleFetch.retry} minHeight={300}>
+            {scheduleFetch.data?.sessions && <ScheduleWidget sessions={scheduleFetch.data.sessions} />}
           </WidgetWrapper>
         </Grid>
 
         {/* 3. WEATHER CARD */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={300}>
-            <WeatherWidget weather={data?.weather} weatherInfo={weatherInfo} />
+          <WidgetWrapper loading={weatherFetch.loading} error={weatherFetch.error} onRefresh={weatherFetch.retry} minHeight={300}>
+            <WeatherWidget weather={weatherFetch.data?.weather} weatherInfo={weatherInfo} />
           </WidgetWrapper>
         </Grid>
       </Grid>
