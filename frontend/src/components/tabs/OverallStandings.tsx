@@ -22,7 +22,10 @@ const OverallStandings = () => {
   const constructorsData = useDataFetch<{ standings: ConstructorStanding[] }>(
     "/api/f1/standings/constructors"
   );
-  const statsData = useDataFetch<{ stats: DriverStat[] }>(
+  const dnfData = useDataFetch<{ stats: DriverStat[] }>(
+    "/api/f1/driver-stats"
+  );
+  const gridData = useDataFetch<{ stats: DriverStat[] }>(
     "/api/f1/driver-stats"
   );
   const winsData = useDataFetch<{ wins: ConstructorWin[] }>(
@@ -71,14 +74,14 @@ const OverallStandings = () => {
           onRefresh={positionsData.retry}
         />
         <DriverDNFChart
-          stats={statsData.data?.stats ?? []}
-          loading={statsData.loading}
-          onRefresh={statsData.retry}
+          stats={dnfData.data?.stats ?? []}
+          loading={dnfData.loading}
+          onRefresh={dnfData.retry}
         />
         <DriverGridPositionChart
-          stats={statsData.data?.stats ?? []}
-          loading={statsData.loading}
-          onRefresh={statsData.retry}
+          stats={gridData.data?.stats ?? []}
+          loading={gridData.loading}
+          onRefresh={gridData.retry}
         />
         <ConstructorWinsChart
           wins={winsData.data?.wins ?? []}

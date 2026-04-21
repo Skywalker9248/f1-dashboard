@@ -43,7 +43,7 @@ const DriverDNFChart = memo(({ stats, loading, onRefresh }: DriverDNFChartProps)
           return `${stat.driver}<br/>DNFs: ${stat.dnfCount}<br/>Team: ${stat.team}`;
         },
       },
-      grid: { left: "1%", right: "1%", bottom: "15%", containLabel: true },
+      grid: { left: "1%", right: "1%", bottom: "15%", top: "15%", containLabel: true },
       xAxis: {
         type: "category",
         data: sortedStats.map((d) => d.driverAcronym),
@@ -87,6 +87,7 @@ const DriverDNFChart = memo(({ stats, loading, onRefresh }: DriverDNFChartProps)
         right: "50%",
         marginLeft: "-50vw",
         marginRight: "-50vw",
+        mt: 4,
         mb: 4,
       }}
     >

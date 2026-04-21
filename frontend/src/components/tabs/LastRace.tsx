@@ -132,6 +132,7 @@ const LastRace = () => {
           formatter: (value: number) => formatLapTime(value),
         },
       },
+      grid: { left: "3%", right: "3%", bottom: "15%", top: "15%", containLabel: true },
       series: [
         {
           name: "Fastest Lap",
@@ -156,9 +157,10 @@ const LastRace = () => {
   return (
     <Box sx={{ py: 2 }}>
       {/* Session Information */}
+      <Box sx={{ mb: 4 }}>
       <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={130}>
         {data && (
-          <Paper sx={{ p: 3, mb: 4, backgroundColor: "background.default" }}>
+          <Paper sx={{ p: 3, backgroundColor: "background.default" }}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, md: 6 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -178,8 +180,10 @@ const LastRace = () => {
           </Paper>
         )}
       </WidgetWrapper>
+      </Box>
 
       {/* Results Table */}
+      <Box sx={{ mb: 4 }}>
       <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={400}>
         {data && (
           <Paper sx={{ p: 3, display: "flex", flexDirection: "column" }}>
@@ -263,6 +267,7 @@ const LastRace = () => {
           <Alert severity="warning">No race data available.</Alert>
         )}
       </WidgetWrapper>
+      </Box>
 
       {/* Fastest Lap Chart - Full Width */}
       <Box
@@ -273,7 +278,6 @@ const LastRace = () => {
           right: "50%",
           marginLeft: "-50vw",
           marginRight: "-50vw",
-          mt: 4,
         }}
       >
         <WidgetWrapper loading={loading} error={error} onRefresh={retry} minHeight={CHART_HEIGHT}>

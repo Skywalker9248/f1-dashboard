@@ -48,7 +48,7 @@ const DriverGridPositionChart = memo(
             return `${stat.driver}<br/>Avg Grid: ${stat.averageGridPosition?.toFixed(2)}<br/>Team: ${stat.team}`;
           },
         },
-        grid: { left: "1%", right: "1%", bottom: "15%", containLabel: true },
+        grid: { left: "1%", right: "1%", bottom: "15%", top: "15%", containLabel: true },
         xAxis: {
           type: "category",
           data: sortedStats.map((d) => d.driverAcronym),
@@ -97,6 +97,7 @@ const DriverGridPositionChart = memo(
           right: "50%",
           marginLeft: "-50vw",
           marginRight: "-50vw",
+          mt: 4,
           mb: 4,
         }}
       >

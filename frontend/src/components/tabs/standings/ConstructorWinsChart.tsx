@@ -79,6 +79,7 @@ const ConstructorWinsChart = memo(({ wins, loading, onRefresh }: ConstructorWins
         right: "50%",
         marginLeft: "-50vw",
         marginRight: "-50vw",
+        mt: 4,
         mb: 4,
       }}
     >
