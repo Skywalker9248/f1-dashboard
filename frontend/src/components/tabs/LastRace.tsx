@@ -126,13 +126,16 @@ const LastRace = () => {
       yAxis: {
         type: "value",
         name: "Lap Time (seconds)",
+        min: driversWithLaps.length > 0
+          ? Math.floor(Math.min(...driversWithLaps.map((d) => d.fastestLapTime ?? Infinity)) - 2)
+          : 0,
         nameTextStyle: { color: theme.palette.text.secondary },
         axisLabel: {
           color: theme.palette.text.secondary,
           formatter: (value: number) => formatLapTime(value),
         },
       },
-      grid: { left: "3%", right: "3%", bottom: "15%", top: "15%", containLabel: true },
+      grid: { left: "3%", right: "3%", bottom: "15%", top: "20%", containLabel: true },
       series: [
         {
           name: "Fastest Lap",
@@ -143,7 +146,7 @@ const LastRace = () => {
           })),
           label: {
             show: true,
-            position: "insideTop",
+            position: "top",
             color: theme.palette.text.primary,
             formatter: (params: { value: number }) =>
               formatLapTime(params.value),

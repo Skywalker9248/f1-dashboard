@@ -61,11 +61,15 @@ const DriverGridPositionChart = memo(
         yAxis: {
           type: "value",
           name: "Grid Position",
+          min: 0,
           nameTextStyle: { color: theme.palette.text.secondary },
-          axisLabel: { color: theme.palette.text.secondary },
-          inverse: true,
-          min: 1,
-          max: 20,
+          axisLabel: {
+            color: theme.palette.text.secondary,
+            formatter: (value: number) => (value === 0 ? "" : `P${value}`),
+          },
+          splitLine: {
+            lineStyle: { color: theme.palette.divider, opacity: 0.3 },
+          },
         },
         series: [
           {
@@ -77,7 +81,7 @@ const DriverGridPositionChart = memo(
             })),
             label: {
               show: true,
-              position: "bottom",
+              position: "top",
               color: theme.palette.text.primary,
               formatter: (params: { value: number }) =>
                 params.value.toFixed(1),
