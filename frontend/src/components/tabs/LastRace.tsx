@@ -143,7 +143,7 @@ const LastRace = () => {
           })),
           label: {
             show: true,
-            position: "top",
+            position: "insideTop",
             color: theme.palette.text.primary,
             formatter: (params: { value: number }) =>
               formatLapTime(params.value),
