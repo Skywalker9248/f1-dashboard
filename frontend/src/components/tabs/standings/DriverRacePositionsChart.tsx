@@ -152,20 +152,9 @@ const DriverRacePositionsChart = ({
   );
 
   return (
-    <Box
-      sx={{
-        width: "100vw",
-        position: "relative",
-        left: "50%",
-        right: "50%",
-        marginLeft: "-50vw",
-        marginRight: "-50vw",
-        mt: 4,
-        mb: 4,
-      }}
-    >
+    <Box sx={{ mt: 4, mb: 4 }}>
       <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={600}>
-        <Paper sx={{ p: 2, borderRadius: 0 }}>
+        <Paper sx={{ p: 2 }}>
           <Box
             sx={{
               display: "flex",

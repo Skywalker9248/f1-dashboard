@@ -93,20 +93,9 @@ const DriverGridPositionChart = memo(
     );
 
     return (
-      <Box
-        sx={{
-          width: "100vw",
-          position: "relative",
-          left: "50%",
-          right: "50%",
-          marginLeft: "-50vw",
-          marginRight: "-50vw",
-          mt: 4,
-          mb: 4,
-        }}
-      >
+      <Box sx={{ mt: 4, mb: 4 }}>
         <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={CHART_HEIGHT}>
-          <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+          <Paper sx={{ height: CHART_HEIGHT, p: 2 }}>
             <ReactECharts
               option={chartOption}
               style={{ height: "100%", width: "100%" }}
