@@ -42,7 +42,7 @@ const Home = () => {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", backgroundColor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "background.default", overflowX: "hidden" }}>
       <Navbar />
       <Container maxWidth={false}>
         <Box

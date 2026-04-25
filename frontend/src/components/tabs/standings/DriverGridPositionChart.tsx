@@ -77,7 +77,7 @@ const DriverGridPositionChart = memo(
             })),
             label: {
               show: true,
-              position: "top",
+              position: "bottom",
               color: theme.palette.text.primary,
               formatter: (params: { value: number }) =>
                 params.value.toFixed(1),

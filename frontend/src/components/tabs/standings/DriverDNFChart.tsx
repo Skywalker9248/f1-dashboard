@@ -56,6 +56,7 @@ const DriverDNFChart = memo(({ stats, loading, onRefresh }: DriverDNFChartProps)
       yAxis: {
         type: "value",
         name: "DNF Count",
+        minInterval: 1,
         nameTextStyle: { color: theme.palette.text.secondary },
         axisLabel: { color: theme.palette.text.secondary },
       },
