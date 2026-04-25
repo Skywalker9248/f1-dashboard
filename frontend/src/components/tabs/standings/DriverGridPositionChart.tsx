@@ -61,11 +61,15 @@ const DriverGridPositionChart = memo(
         yAxis: {
           type: "value",
           name: "Grid Position",
+          min: 0,
           nameTextStyle: { color: theme.palette.text.secondary },
-          axisLabel: { color: theme.palette.text.secondary },
-          inverse: true,
-          min: 1,
-          max: 20,
+          axisLabel: {
+            color: theme.palette.text.secondary,
+            formatter: (value: number) => (value === 0 ? "" : `P${value}`),
+          },
+          splitLine: {
+            lineStyle: { color: theme.palette.divider, opacity: 0.3 },
+          },
         },
         series: [
           {
@@ -89,20 +93,9 @@ const DriverGridPositionChart = memo(
     );
 
     return (
-      <Box
-        sx={{
-          width: "100vw",
-          position: "relative",
-          left: "50%",
-          right: "50%",
-          marginLeft: "-50vw",
-          marginRight: "-50vw",
-          mt: 4,
-          mb: 4,
-        }}
-      >
+      <Box sx={{ mt: 4, mb: 4 }}>
         <WidgetWrapper loading={loading ?? false} onRefresh={onRefresh} minHeight={CHART_HEIGHT}>
-          <Paper sx={{ height: CHART_HEIGHT, p: 2, borderRadius: 0 }}>
+          <Paper sx={{ height: CHART_HEIGHT, p: 2 }}>
             <ReactECharts
               option={chartOption}
               style={{ height: "100%", width: "100%" }}
